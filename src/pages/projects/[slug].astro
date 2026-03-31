@@ -1,0 +1,109 @@
+---
+import { getCollection, render } from "astro:content";
+import Layout from "@/layouts/main.astro";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { ImageHero, ImageGrid } from "@/components/ImageGallery";
+import { ArrowLeft, ExternalLink, Github } from "@/components/icons";
+
+export async function getStaticPaths() {
+  const projects = await getCollection("projects");
+  return projects.map((project) => ({
+    params: { slug: project.slug },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+const { Content } = await render(project);
+const { title, description, tags, images, githubUrl, liveUrl, year } =
+  project.data;
+---
+
+<Layout title={`${title} — Elwann Guillemot`}>
+  <div class="min-h-screen bg-background text-foreground">
+    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
+      <header class="mb-12 flex w-full items-start justify-between">
+        <a
+          href="/#projects"
+          class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
+        >
+          <ArrowLeft size={14} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
+          Back to projects
+        </a>
+        <ThemeToggle client:load />
+      </header>
+
+      <header class="mb-12">
+        <h1 class="mb-3 text-3xl font-bold">{title}</h1>
+        <p class="mb-6 text-lg text-muted-foreground">{description}</p>
+        <p class="text-xs text-muted-foreground/40">
+          {tags.join(" · ")}
+        </p>
+      </header>
+
+      <div class="mb-12">
+        <ImageHero images={images} title={title} client:load />
+      </div>
+
+      <div class="mb-12 grid gap-12 md:grid-cols-3">
+        <div class="col-span-2">
+          <h2 class="mb-4 text-xl font-semibold">About the project</h2>
+          <div class="text-muted-foreground">
+            <Content />
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <div>
+            <h3 class="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Year
+            </h3>
+            <p class="text-sm">{year}</p>
+          </div>
+
+          {
+            (liveUrl || githubUrl) && (
+              <div>
+                <h3 class="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Links
+                </h3>
+                <div class="space-y-2">
+                  {liveUrl && (
+                    <a
+                      href={liveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
+                    >
+                      <ExternalLink size={14} />
+                      Live Preview
+                    </a>
+                  )}
+                  {githubUrl && (
+                    <a
+                      href={githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
+                    >
+                      <Github size={14} />
+                      Source Code
+                    </a>
+                  )}
+                </div>
+              </div>
+            )
+          }
+        </div>
+      </div>
+
+      {
+        images.length > 1 && (
+          <div class="mb-12">
+            <ImageGrid images={images} title={title} client:load />
+          </div>
+        )
+      }
+    </div>
+  </div>
+</Layout>
