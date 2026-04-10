@@ -140,7 +140,7 @@ export function ProjectShowcase({ projects }: { projects: ProjectItem[] }) {
               }}
               onClick={() => switchTo(i)}
               className={cn(
-                "whitespace-nowrap text-left text-sm transition-all duration-200 sm:py-2 sm:pl-4",
+                "text-left text-sm transition-all duration-200 sm:py-2 sm:pl-4",
                 isActive
                   ? "font-medium"
                   : "text-muted-foreground hover:translate-x-0.5 hover:text-foreground"
