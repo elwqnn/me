@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/elwqnn/me
+    image: ghcr.io/elwqnn/me:latest
     build:
       context: .
       dockerfile: Dockerfile
