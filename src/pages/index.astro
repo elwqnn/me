@@ -43,7 +43,10 @@ const projects = (await getCollection("projects")).sort(
 
       <section id="projects" class="py-12">
         <h3 class="mb-6 text-lg font-medium">
-          Some of my Projects (visuals wip)
+          Some of my Projects <span
+            class="text-xs font-normal text-muted-foreground"
+            >(visuals soon)</span
+          >
         </h3>
         <ProjectShowcase
           projects={projects.map((p) => ({
