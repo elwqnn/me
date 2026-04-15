@@ -14,4 +14,4 @@ order: 6
 accentColor: "#D3869B"
 ---
 
-Area is an automation tool designed to help anyone that need an action-reaction between multiple services. Use it to remove the overhead of your daylife, and start focusing on where you want to. It features a clean and intuitive interface with Action/Reaction creation, customizable AREAs, and the integration of many popular services.
+Area is an automation tool designed to help anyone who needs an action-reaction between multiple services. Use it to remove the overhead of your daily life, and start focusing on what matters. It features a clean and intuitive interface with Action/Reaction creation, customizable AREAs, and the integration of many popular services.

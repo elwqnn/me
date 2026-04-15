@@ -37,6 +37,22 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <meta name="twitter:description" content={description} />
     {image && <meta name="twitter:image" content={new URL(image, Astro.site)} />}
 
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Person",
+        name: "Elwann Guillemot",
+        url: "https://me.elwqnn.eu",
+        jobTitle: "Back-end Developer",
+        sameAs: [
+          "https://github.com/Elwqnn",
+          "https://www.linkedin.com/in/elwannguillemot/",
+        ],
+      })}
+    />
+
+
     <script is:inline>
       const theme = localStorage.getItem("theme") ?? "system";
       const isDark =
