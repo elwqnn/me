@@ -2,7 +2,9 @@
 title: Wave Function Collapse
 description: High-performance Rust implementation of the WFC algorithm
 tags: [Rust, Procedural Generation]
-githubUrl: https://github.com/Elwqnn/wfc
+images:
+  - /images/projects/wfc/wfc-cover.png
+githubUrl: https://github.com/elwqnn/wfc
 liveUrl: https://crates.io/crates/wfc-core
 year: "2025"
 order: 5

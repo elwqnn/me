@@ -8,7 +8,7 @@ images:
   - /images/projects/sonar/main.png
   - /images/projects/sonar/login.png
   - /images/projects/sonar/library_select.png
-githubUrl: https://github.com/Elwqnn/sonar
+githubUrl: https://github.com/elwqnn/sonar
 year: "2026"
 order: 3
 accentColor: "#FABD2F"

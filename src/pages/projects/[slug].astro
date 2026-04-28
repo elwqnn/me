@@ -1,25 +1,29 @@
 ---
-import { getCollection, render } from "astro:content";
-import Layout from "@/layouts/main.astro";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { ImageHero, ImageGrid } from "@/components/ImageGallery";
-import { ArrowLeft, ExternalLink, Github } from "@/components/icons";
+import { getCollection, render } from "astro:content"
+import Layout from "@/layouts/main.astro"
+import { ThemeToggle } from "@/components/ThemeToggle"
+import { ImageHero, ImageGrid } from "@/components/ImageGallery"
+import { ArrowLeft, ExternalLink, Github } from "@/components/icons"
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects");
+  const projects = await getCollection("projects")
   return projects.map((project) => ({
     params: { slug: project.slug },
     props: { project },
-  }));
+  }))
 }
 
-const { project } = Astro.props;
-const { Content } = await render(project);
+const { project } = Astro.props
+const { Content } = await render(project)
 const { title, description, tags, images, githubUrl, liveUrl, year } =
-  project.data;
+  project.data
 ---
 
-<Layout title={`${title} — Elwann Guillemot`} description={description} image={images[0]}>
+<Layout
+  title={`${title} — Elwann Guillemot`}
+  description={description}
+  image={images[0]}
+>
   <div class="min-h-screen bg-background text-foreground">
     <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
       <header class="mb-12 flex w-full items-start justify-between">
@@ -27,7 +31,10 @@ const { title, description, tags, images, githubUrl, liveUrl, year } =
           href="/#projects"
           class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
         >
-          <ArrowLeft size={14} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
+          <ArrowLeft
+            size={14}
+            className="transition-transform duration-200 group-hover:-translate-x-0.5"
+          />
           Back to projects
         </a>
         <ThemeToggle client:load />
@@ -48,14 +55,18 @@ const { title, description, tags, images, githubUrl, liveUrl, year } =
       <div class="mb-12 grid gap-12 md:grid-cols-3">
         <div class="col-span-2">
           <h2 class="mb-4 text-xl font-semibold">About the project</h2>
-          <div class="text-muted-foreground">
+          <div
+            class="text-muted-foreground [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors [&_a:hover]:text-primary"
+          >
             <Content />
           </div>
         </div>
 
         <div class="space-y-6">
           <div>
-            <h3 class="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <h3
+              class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase"
+            >
               Year
             </h3>
             <p class="text-sm">{year}</p>
@@ -64,7 +75,7 @@ const { title, description, tags, images, githubUrl, liveUrl, year } =
           {
             (liveUrl || githubUrl) && (
               <div>
-                <h3 class="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <h3 class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                   Links
                 </h3>
                 <div class="space-y-2">

@@ -8,7 +8,7 @@ images:
   - /images/projects/area/area-dashboard-empty.png
   - /images/projects/area/area-login.png
   - /images/projects/area/area-dashboard-dark.png
-githubUrl: https://github.com/Elwqnn/area
+githubUrl: https://github.com/elwqnn/area
 year: "2024"
 order: 6
 accentColor: "#D3869B"

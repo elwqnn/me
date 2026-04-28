@@ -2,10 +2,15 @@
 title: Scylla
 description: Open-source CI/CD engine built from scratch in Rust
 tags: [Rust, gRPC, SurrealDB, React]
+images:
+  - /images/projects/scylla/scylla-cover.png
 githubUrl: https://github.com/scylla-ops
 year: "2026"
-order: 1
+order: 2
 accentColor: "#FB4934"
 ---
 
-Open-source CI/CD engine built from scratch in Rust with a clean/hexagonal architecture. Microservices workspace: gRPC/Web API, DAG-based pipeline orchestrator with state-machine job tracking, a custom message broker for distributed agent dispatch, and policy-based RBAC. Stateless agents with heartbeat discovery execute pipeline nodes in parallel with crash recovery and idempotent messaging. React frontend following Clean Architecture with visual DAG editing, real-time pipeline dashboard, and i18n.
+[We're](https://github.com/scylla-ops) building an alternative to proprietary CI tools that shines where you need full ownership over your infrastructure, forever.
+An open-source CI platform, delivered as a PaaS and deployable anywhere.
+
+We focus on ease of use, support for applications at any scale, and high performance.
