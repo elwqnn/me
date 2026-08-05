@@ -130,3 +130,16 @@
     @apply font-sans;
     }
 }
+
+/* Grain overlay — same texture and values as caddis, fixed over the whole page. */
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.13;
+  background-image: url("/images/noise.png");
+  background-repeat: repeat;
+  background-position: center top;
+  background-size: 153.5px auto;
+}
