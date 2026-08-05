@@ -65,11 +65,14 @@ export function ImageGrid({ images, title }: Props) {
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="gap-4 sm:columns-2">
         {images.slice(1).map((src, i) => (
           <div
             key={src}
-            className="cursor-pointer overflow-hidden rounded-lg"
+            className={`mb-4 cursor-pointer overflow-hidden break-inside-avoid rounded-lg ${
+              // suffix a frontmatter image path with #wide to span the full row
+              src.endsWith("#wide") ? "[column-span:all]" : ""
+            }`}
             onClick={() => openAt(i + 1)}
             onKeyDown={(e) => e.key === "Enter" && openAt(i + 1)}
             tabIndex={0}
