@@ -4,7 +4,7 @@ description: "Action? Reaction!"
 tags: [Go, Svelte, PostgreSQL, Docker]
 images:
   - /images/projects/area/area-services.png
-  - /images/projects/area/area-create.png
+  - /images/projects/area/area-create.png#wide
   - /images/projects/area/area-dashboard-empty.png
   - /images/projects/area/area-login.png
   - /images/projects/area/area-dashboard-dark.png
