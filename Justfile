@@ -33,7 +33,7 @@ logs:
     docker compose logs -f
 
 push:
-    docker build --no-cache -t {{ IMAGE }}:latest .
+    docker build -t {{ IMAGE }}:latest .
     docker push {{ IMAGE }}:latest
 
 # - Deploy ---
