@@ -10,7 +10,7 @@ order: 2
 accentColor: "#FB4934"
 ---
 
-[We're](https://github.com/scylla-ops) building an alternative to proprietary CI tools that shines where you need full ownership over your infrastructure, forever.
+[We're](https://github.com/scylla-ops) building an alternative to proprietary CI tools, built on a modern stack. It shines where you need full ownership over your infrastructure, forever.
 An open-source CI platform, delivered as a PaaS and deployable anywhere.
 
 We focus on ease of use, support for applications at any scale, and high performance.

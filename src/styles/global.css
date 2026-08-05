@@ -143,3 +143,7 @@
   background-position: center top;
   background-size: 153.5px auto;
 }
+
+.dark .noise-overlay {
+  opacity: 0.06;
+}
