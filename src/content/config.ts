@@ -12,6 +12,7 @@ const projects = defineCollection({
     year: z.string(),
     order: z.number().default(99),
     accentColor: z.string().optional(),
+    isNew: z.boolean().default(false),
   }),
 })
 

@@ -15,6 +15,7 @@ githubUrl: https://github.com/andre-brandao/gpui-shell
 year: "2026"
 order: 1
 accentColor: "#FE8019"
+isNew: true
 ---
 
 My first real contribution to an open-source project! It is a Wayland desktop shell built in Rust with Zed's [GPUI framework](https://www.gpui.rs/).  

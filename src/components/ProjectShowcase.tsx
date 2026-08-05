@@ -6,9 +6,23 @@ import {
   useCallback,
 } from "react"
 import { cn } from "@/lib/utils"
+import { CaddisShader } from "./CaddisShader"
 
 const CYCLE_MS = 8000
 const BAR_HEIGHT = 20
+
+// Shader as the badge fill. dpr 0.5 on a ~34px pill means a ~17x9 buffer —
+// the gradient is smooth enough that the upscale doesn't show.
+function NewBadge() {
+  return (
+    <span className="relative ml-3 inline-flex overflow-hidden rounded-full px-1.5 align-[0.15em] text-[10px] font-semibold text-black/80">
+      <span className="absolute inset-0">
+        <CaddisShader dpr={0.5} waveSpeed={2.5} />
+      </span>
+      <span className="relative">new!</span>
+    </span>
+  )
+}
 
 export interface ProjectItem {
   slug: string
@@ -18,6 +32,7 @@ export interface ProjectItem {
   images: string[]
   accentColor: string
   year: string
+  isNew: boolean
 }
 
 export function ProjectShowcase({ projects }: { projects: ProjectItem[] }) {
@@ -148,6 +163,7 @@ export function ProjectShowcase({ projects }: { projects: ProjectItem[] }) {
               style={isActive ? { color: project.accentColor } : undefined}
             >
               {project.title}
+              {project.isNew && <NewBadge />}
               {isActive && (
                 <div className="mt-0.5 hidden text-xs font-normal text-muted-foreground/50 animate-in fade-in slide-in-from-top-1 sm:block">
                   {project.year} · {project.tags[0]}

@@ -57,6 +57,7 @@ const projects = (await getCollection("projects")).sort(
             images: p.data.images,
             accentColor: p.data.accentColor ?? "var(--primary)",
             year: p.data.year,
+            isNew: p.data.isNew,
           }))}
           client:load
         />
@@ -77,10 +78,11 @@ const projects = (await getCollection("projects")).sort(
           >
           on github
         </p>
-        <p class="mb-4">
+        <p class="mb-4 text-muted-foreground">
+          email me at
           <a
             href="mailto:elwann.guillemot@epitech.eu"
-            class="inline-flex items-center gap-1.5 font-medium transition-colors duration-200 hover:text-primary"
+            class="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors duration-200 hover:text-primary"
           >
             elwann.guillemot@epitech.eu
             <ExternalLinkIcon size={16} />
