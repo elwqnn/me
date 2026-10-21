@@ -7,10 +7,9 @@ RUN bun install --frozen-lockfile
 COPY . .
 RUN bun run build
 
-FROM nginx:1.27-alpine AS runtime
-COPY --from=builder /app/dist /usr/share/nginx/html
-RUN chmod -R a+r /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM caddy:2.11-alpine AS runtime
+COPY Caddyfile /etc/caddy/Caddyfile
+RUN caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+COPY --from=builder /app/dist /srv
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]

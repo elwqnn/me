@@ -1,0 +1,52 @@
+{
+	servers {
+		trusted_proxies static private_ranges
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
+	}
+}
+
+(security) {
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'self'; frame-ancestors 'self';"
+		-Server
+	}
+}
+
+:80 {
+	root * /srv
+	encode zstd gzip
+	import security
+
+	@quiet path /robots.txt /sitemap-index.xml
+	log_skip @quiet
+
+	@assets path *.js *.css *.png *.jpg *.jpeg *.gif *.webp *.ico *.svg *.woff *.woff2 *.ttf *.eot
+	handle @assets {
+		header >Cache-Control "max-age=31536000"
+		file_server
+	}
+
+	@pdf path *.pdf
+	handle @pdf {
+		header >Cache-Control "no-cache"
+		file_server
+	}
+
+	handle {
+		try_files {path} {path}/index.html /index.html
+		file_server
+	}
+
+	handle_errors {
+		import security
+	}
+
+	log {
+		output stdout
+	}
+}
