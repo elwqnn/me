@@ -267,9 +267,10 @@ export function CaddisShader({
     ro.observe(canvas)
     resize()
 
+    const timeOffset = Math.random() * 60000
     const draw = (time: number) => {
       setUniforms()
-      gl.uniform1f(uTime, time * 0.001)
+      gl.uniform1f(uTime, (time + timeOffset) * 0.001)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
     }
 

@@ -25,6 +25,7 @@ githubUrl: https://github.com/scylla-ops
 year: "2026"
 order: 2
 accentColor: "#FB4934"
+isNew: true
 ---
 
 [Scylla](https://scylla-ops.com) is an [open-source](https://github.com/scylla-ops/scylla) CI/CD platform, written entirely in Rust. The idea is simple: pipelines that are quick to set up and easy to read, whether you're a solo developer or a whole team.
