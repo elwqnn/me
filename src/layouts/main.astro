@@ -20,7 +20,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href={canonicalURL} />
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -69,7 +70,9 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
     </script>
   </head>
   <body>
-    <slot />
-    <div class="noise-overlay" aria-hidden="true"></div>
+    <div class="relative isolate min-h-screen">
+      <slot />
+      <div class="noise-overlay" aria-hidden="true"></div>
+    </div>
   </body>
 </html>
