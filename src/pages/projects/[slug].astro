@@ -1,22 +1,70 @@
 ---
 import { getCollection, render } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ImageHero, ImageGrid } from "@/components/ImageGallery"
-import { ArrowLeft, ExternalLink, Github } from "@/components/icons"
+import Bitmap from "@/components/Bitmap.astro"
+import Arrow from "@/components/Arrow.astro"
+import Lightbox from "@/components/Lightbox.astro"
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects")
-  return projects.map((project) => ({
+  const projects = (await getCollection("projects")).sort(
+    (a, b) => a.data.order - b.data.order
+  )
+  return projects.map((project, index) => ({
     params: { slug: project.id },
-    props: { project },
+    props: {
+      project,
+      index,
+      total: projects.length,
+      next: projects[(index + 1) % projects.length],
+    },
   }))
 }
 
-const { project } = Astro.props
+const { project, index, total, next } = Astro.props
 const { Content } = await render(project)
-const { title, description, tags, images, links, githubUrl, liveUrl, year } =
-  project.data
+const {
+  title,
+  description,
+  tags,
+  images,
+  links,
+  githubUrl,
+  liveUrl,
+  year,
+  isNew,
+  accentColor,
+} = project.data
+
+const pad = (n: number) => String(n).padStart(2, "0")
+const clean = images.map((src) => src.replace(/#wide$/, ""))
+const plates = images.slice(1).map((src, i) => ({
+  src: clean[i + 1],
+  wide: src.endsWith("#wide"),
+  index: i + 1,
+}))
+
+const fillers = (cols: number) => {
+  const before = new Map<number, number>()
+  let col = 0
+  plates.forEach((plate, k) => {
+    if (plate.wide) {
+      if (col) before.set(k, cols - col)
+      col = 0
+    } else col = (col + 1) % cols
+  })
+  return { before, after: col ? cols - col : 0 }
+}
+const grid = [
+  { ...fillers(2), only: "hidden sm:block lg:hidden" },
+  { ...fillers(3), only: "hidden lg:block" },
+]
+
+const allLinks = [
+  ...links,
+  ...(liveUrl ? [{ label: "Live Preview", url: liveUrl }] : []),
+  ...(githubUrl ? [{ label: "Source Code", url: githubUrl }] : []),
+]
+const host = (url: string) => new URL(url).host.replace(/^www\./, "")
 ---
 
 <Layout
@@ -24,108 +72,202 @@ const { title, description, tags, images, links, githubUrl, liveUrl, year } =
   description={description}
   image={images[0]}
 >
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <a
-          href="/#projects"
-          class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-        >
-          <ArrowLeft
-            size={14}
-            className="transition-transform duration-200 group-hover:-translate-x-0.5"
-          />
-          Back to projects
-        </a>
-        <ThemeToggle client:load />
-      </header>
+  <header id="top" class="row label grid-cols-2 md:grid-cols-12">
+    <a
+      href="/#work"
+      class="cell cell-link invert-hover flex items-center gap-3 md:col-span-2"
+    >
+      <Arrow dir="left" size={10} /> Index
+    </a>
+    <p class="cell hidden md:col-span-3 md:block">Elwann Guillemot</p>
+    <p class="cell hidden md:col-span-3 md:block">Back-end Developer</p>
+    <p class="cell hidden tabular-nums md:col-span-2 md:block">
+      Project {pad(index + 1)} / {pad(total)}
+    </p>
+    <a
+      href={`/projects/${next.id}`}
+      class="cell cell-link invert-hover flex items-center justify-end gap-3 md:col-span-2"
+    >
+      Next <Arrow size={10} />
+    </a>
+  </header>
 
-      <header class="mb-12">
-        <h1 class="mb-3 text-3xl font-bold">{title}</h1>
-        <p class="mb-6 text-lg text-muted-foreground">{description}</p>
-        <p class="text-xs text-muted-foreground/40">
-          {tags.join(" · ")}
+  <main class="stack">
+    <section class="row grid-cols-1 md:grid-cols-12">
+      <div class="cell flex flex-col gap-6 md:col-span-12">
+        <p class="label flex items-center gap-3">
+          <span>{pad(index + 1)}</span>
+          {isNew && <span class="tag-new">New</span>}
         </p>
-      </header>
-
-      <div class="mb-12">
-        <ImageHero images={images} title={title} client:load />
+        <h1 class="ptitle boot dot">{title}</h1>
       </div>
-
-      <div class="mb-12 grid gap-12 md:grid-cols-3">
-        <div class="col-span-2">
-          <h2 class="mb-4 text-xl font-semibold">About the project</h2>
-          <div
-            class="space-y-4 text-muted-foreground [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors [&_a:hover]:text-primary"
-          >
-            <Content />
-          </div>
-        </div>
-
-        <div class="space-y-6">
-          <div>
-            <h3
-              class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase"
-            >
-              Year
-            </h3>
-            <p class="text-sm">{year}</p>
-          </div>
-
+      <p
+        class="cell text-[clamp(18px,1.7vw,26px)] leading-[1.35] md:col-span-6"
+      >
+        {description}
+      </p>
+      <div class="cell md:col-span-2">
+        <p class="label mb-2">Year</p>
+        <p class="dot text-[clamp(32px,3vw,48px)]">{year}</p>
+      </div>
+      <div class="cell md:col-span-4">
+        <p class="label mb-3">Stack</p>
+        <ul class="flex flex-wrap gap-2" aria-label="Tags">
           {
-            (links.length > 0 || liveUrl || githubUrl) && (
-              <div>
-                <h3 class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  Links
-                </h3>
-                <div class="space-y-2">
-                  {links.map(({ label, url }) => (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      {label}
-                    </a>
-                  ))}
-                  {liveUrl && (
-                    <a
-                      href={liveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      Live Preview
-                    </a>
-                  )}
-                  {githubUrl && (
-                    <a
-                      href={githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <Github size={14} />
-                      Source Code
-                    </a>
-                  )}
-                </div>
-              </div>
-            )
+            tags.map((tag) => (
+              <li class="label border border-ink px-2 py-1">{tag}</li>
+            ))
           }
-        </div>
+        </ul>
       </div>
+    </section>
 
+    <section class="row grid-cols-1" aria-label="Cover">
       {
-        images.length > 1 && (
-          <div class="mb-12">
-            <ImageGrid images={images} title={title} client:load />
+        clean.length > 0 ? (
+          <button
+            type="button"
+            data-open="0"
+            class="cell cell-link group relative aspect-[4/3] cursor-zoom-in p-0 sm:aspect-[16/9]"
+            aria-label={`Open image 1 of ${clean.length} full size`}
+          >
+            <Bitmap
+              src={clean[0]}
+              alt={`${title} cover`}
+              fit="contain"
+              eager
+              class="absolute inset-0"
+            />
+            <span class="label absolute top-0 left-0 border-r border-b border-ink bg-paper px-3 py-2">
+              Plate 01
+            </span>
+            <span class="label absolute right-0 bottom-0 flex items-center gap-2 border-t border-l border-ink bg-paper px-3 py-2">
+              Full size <Arrow dir="out" size={10} />
+            </span>
+          </button>
+        ) : (
+          <div class="cell relative aspect-[4/3] p-0 sm:aspect-[16/9]">
+            <Bitmap accent={accentColor} eager class="absolute inset-0" />
+            <span class="label absolute top-0 left-0 border-r border-b border-ink bg-paper px-3 py-2">
+              Fig. 01 &mdash; Subject trie, generated
+            </span>
           </div>
         )
       }
-    </div>
-  </div>
+    </section>
+
+    <section class="row grid-cols-1 lg:grid-cols-12">
+      <div class="cell lg:col-span-7">
+        <h2 class="label mb-5">About the project</h2>
+        <div class="prose-bitmap max-w-[62ch] text-[16px] leading-[1.7]">
+          <Content />
+        </div>
+      </div>
+      <div class="stack lg:col-span-5">
+        <h2 class="cell label">Links</h2>
+        {
+          allLinks.map(({ label, url }) => (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="cell cell-link invert-hover grid grid-cols-[1fr_auto] items-center gap-x-4"
+            >
+              <span class="dot text-[clamp(24px,2.2vw,34px)]">{label}</span>
+              <Arrow dir="out" size={14} />
+              <span class="label truncate">{host(url)}</span>
+            </a>
+          ))
+        }
+        <div class="cell min-h-0 flex-1 p-0"></div>
+      </div>
+    </section>
+
+    {
+      plates.length > 0 && (
+        <section
+          class="row grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+          aria-labelledby="plates-title"
+        >
+          <div class="cell flex flex-wrap items-end justify-between gap-x-8 gap-y-2 sm:col-span-2 lg:col-span-3">
+            <h2 id="plates-title" class="dot text-[clamp(44px,6vw,96px)]">
+              Plates
+            </h2>
+            <p class="label pb-1">
+              {pad(clean.length)} images, open any of them full size
+            </p>
+          </div>
+          {plates.map((plate, k) => (
+            <>
+              {grid.map(({ before, only }) =>
+                Array.from({ length: before.get(k) ?? 0 }, () => (
+                  <div class:list={["cell filler", only]} aria-hidden="true" />
+                ))
+              )}
+              <button
+                type="button"
+                data-open={plate.index}
+                class:list={[
+                  "cell cell-link group relative cursor-zoom-in p-0",
+                  plate.wide
+                    ? "aspect-[4/3] sm:col-span-2 sm:aspect-[16/9] lg:col-span-3 lg:aspect-[2/1]"
+                    : "aspect-[4/3]",
+                ]}
+                aria-label={`Open image ${plate.index + 1} of ${clean.length} full size`}
+              >
+                <Bitmap
+                  src={plate.src}
+                  alt={`${title}, image ${plate.index + 1}`}
+                  fit="contain"
+                  class="absolute inset-[clamp(14px,2.2vw,32px)]"
+                />
+                <span class="label absolute top-0 left-0 px-3 py-2">
+                  {pad(plate.index + 1)}
+                </span>
+              </button>
+            </>
+          ))}
+          {grid.map(({ after, only }) =>
+            Array.from({ length: after }, () => (
+              <div class:list={["cell filler", only]} aria-hidden="true" />
+            ))
+          )}
+        </section>
+      )
+    }
+
+    <section class="row grid-cols-1" aria-label="Next project">
+      <a
+        href={`/projects/${next.id}`}
+        class="cell cell-link card group grid p-0 md:grid-cols-12"
+      >
+        <div
+          class="flex flex-col justify-between gap-6 p-[var(--pad)] md:col-span-7"
+        >
+          <p class="label flex items-center gap-3">
+            Next project <Arrow size={10} />
+          </p>
+          <p class="title dot text-[clamp(40px,5.4vw,88px)]">
+            {next.data.title}
+          </p>
+          <p class="max-w-[48ch]">{next.data.description}</p>
+        </div>
+        <Bitmap
+          src={next.data.images[0]}
+          alt={`${next.data.title} cover`}
+          accent={next.data.accentColor}
+          class="aspect-[16/10] border-t border-ink md:col-span-5 md:aspect-auto md:min-h-[300px] md:border-t-0 md:border-l"
+        />
+      </a>
+    </section>
+  </main>
+
+  {clean.length > 0 && <Lightbox images={clean} title={title} />}
 </Layout>
+
+<style>
+  .ptitle {
+    font-size: clamp(52px, 9.6vw, 168px);
+    text-wrap: balance;
+  }
+</style>

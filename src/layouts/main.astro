@@ -1,5 +1,9 @@
 ---
 import "@/styles/global.css"
+import Wipe from "@/components/Wipe.astro"
+import Arrow from "@/components/Arrow.astro"
+import doto from "@fontsource-variable/doto/files/doto-latin-full-normal.woff2?url"
+import geist from "@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2?url"
 
 interface Props {
   title?: string
@@ -14,15 +18,20 @@ const {
 } = Astro.props
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
+const ogImage = image?.replace(/#wide$/, "")
+const year = new Date().getFullYear()
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#ece9e1" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href={canonicalURL} />
+    <link rel="preload" href={doto} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={geist} as="font" type="font/woff2" crossorigin />
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="author" content="Elwann Guillemot" />
@@ -31,17 +40,21 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    {image && <meta property="og:image" content={new URL(image, Astro.site)} />}
+    {
+      ogImage && (
+        <meta property="og:image" content={new URL(ogImage, Astro.site)} />
+      )
+    }
 
     <meta
       name="twitter:card"
-      content={image ? "summary_large_image" : "summary"}
+      content={ogImage ? "summary_large_image" : "summary"}
     />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     {
-      image && (
-        <meta name="twitter:image" content={new URL(image, Astro.site)} />
+      ogImage && (
+        <meta name="twitter:image" content={new URL(ogImage, Astro.site)} />
       )
     }
 
@@ -61,18 +74,26 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
     />
 
     <script is:inline>
-      const theme = localStorage.getItem("theme") ?? "system"
-      const isDark =
-        theme === "dark" ||
-        (theme === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      if (isDark) document.documentElement.classList.add("dark")
+      document.documentElement.classList.add("js")
     </script>
   </head>
   <body>
-    <div class="relative isolate min-h-screen">
+    <div class="sheet stack min-h-[calc(100dvh-2*clamp(8px,1.4vw,20px))]">
       <slot />
-      <div class="noise-overlay" aria-hidden="true"></div>
+      <footer class="row label mt-auto grid-cols-2 md:grid-cols-12">
+        <p class="cell md:col-span-3">&copy; {year} Elwann Guillemot</p>
+        <p class="cell md:col-span-3">Set in Doto &amp; Geist Mono</p>
+        <p class="cell hidden md:col-span-4 md:block">
+          Two tones, one bit, Atkinson &amp; Bayer
+        </p>
+        <a
+          href="#top"
+          class="cell cell-link invert-hover col-span-2 flex items-center justify-between gap-2"
+        >
+          Back to top <Arrow dir="up" size={10} />
+        </a>
+      </footer>
     </div>
+    <Wipe />
   </body>
 </html>

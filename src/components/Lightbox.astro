@@ -1,0 +1,144 @@
+---
+import Arrow from "./Arrow.astro"
+
+interface Props {
+  images: string[]
+  title: string
+}
+
+const { images, title } = Astro.props
+---
+
+<dialog
+  class="lightbox"
+  aria-label={`${title}, full-size images`}
+  data-images={JSON.stringify(images)}
+  data-title={title}
+>
+  <div class="stack h-full border border-ink">
+    <div class="row label grid-cols-[auto_1fr_auto_auto]">
+      <p class="cell tabular-nums" data-count>01 / 01</p>
+      <p class="cell truncate">{title}</p>
+      <a
+        class="cell cell-link invert-hover flex items-center gap-2"
+        data-original
+        href="#"
+        target="_blank"
+        rel="noopener"
+      >
+        <span class="hidden sm:inline">Original</span>
+        <Arrow dir="out" size={10} />
+        <span class="sr-only">Open the original file in a new tab</span>
+      </a>
+      <button class="cell cell-link invert-hover label" data-close autofocus>
+        Close
+      </button>
+    </div>
+    <div class="stage cell relative min-h-0 flex-1">
+      <figure class="bitmap absolute m-0" style="inset: var(--pad)" data-frame>
+        <img alt="" style="object-fit:contain" />
+        <canvas class="bitmap-dither" aria-hidden="true"></canvas>
+      </figure>
+    </div>
+    <div class="row label grid-cols-2">
+      <button
+        class="cell cell-link invert-hover label flex items-center gap-3"
+        data-step="-1"
+      >
+        <Arrow dir="left" size={10} /> Previous
+      </button>
+      <button
+        class="cell cell-link invert-hover label flex items-center justify-end gap-3"
+        data-step="1"
+      >
+        Next <Arrow size={10} />
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  .lightbox {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: clamp(8px, 1.4vw, 20px);
+    border: 0;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .lightbox::backdrop {
+    background: var(--ink);
+  }
+</style>
+
+<script>
+  import { Surface, easeOut } from "./dither"
+
+  const dialog = document.querySelector<HTMLDialogElement>(".lightbox")
+
+  if (dialog) {
+    const images: string[] = JSON.parse(dialog.dataset.images ?? "[]")
+    const title = dialog.dataset.title ?? ""
+    const frame = dialog.querySelector<HTMLElement>("[data-frame]")!
+    const img = frame.querySelector("img")!
+    const canvas = frame.querySelector("canvas")!
+    const count = dialog.querySelector<HTMLElement>("[data-count]")!
+    const original = dialog.querySelector<HTMLAnchorElement>("[data-original]")!
+    const surface = new Surface(frame, canvas, img, "contain")
+    const pad = (n: number) => String(n).padStart(2, "0")
+    let index = 0
+    let token = 0
+
+    const show = async (i: number) => {
+      index = (i + images.length) % images.length
+      const id = ++token
+      surface.seq.reveal++
+      surface.reveal = 0
+      surface.ink = 1
+      surface.draw()
+      frame.classList.remove("ready")
+      img.src = images[index]
+      img.alt = `${title}, image ${index + 1} of ${images.length}`
+      original.href = images[index]
+      count.textContent = `${pad(index + 1)} / ${pad(images.length)}`
+      try {
+        await surface.layout()
+      } catch {
+        frame.classList.add("ready")
+        return
+      }
+      if (id !== token) return
+      frame.classList.add("ready")
+      surface.origin()
+      surface.to("reveal", 1, 760, easeOut)
+    }
+
+    document.addEventListener("click", (e) => {
+      const trigger = (e.target as Element).closest<HTMLElement>("[data-open]")
+      if (!trigger) return
+      dialog.showModal()
+      show(Number(trigger.dataset.open))
+    })
+
+    dialog.addEventListener("click", (e) => {
+      const t = e.target as Element
+      const step = t.closest<HTMLElement>("[data-step]")
+      if (step) show(index + Number(step.dataset.step))
+      else if (t.closest("[data-close]") || t === dialog || t.matches(".stage"))
+        dialog.close()
+    })
+
+    dialog.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") show(index + 1)
+      if (e.key === "ArrowLeft") show(index - 1)
+    })
+
+    new ResizeObserver(() => {
+      if (dialog.open && frame.classList.contains("ready")) surface.layout()
+    }).observe(frame)
+  }
+</script>

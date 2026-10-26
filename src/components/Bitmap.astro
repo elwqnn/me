@@ -1,0 +1,35 @@
+---
+interface Props {
+  src?: string
+  alt?: string
+  accent?: string
+  fit?: "cover" | "contain"
+  eager?: boolean
+  class?: string
+}
+
+const { src, alt = "", accent, fit = "cover", eager, class: cls } = Astro.props
+const clean = src?.replace(/#wide$/, "")
+---
+
+<div class:list={["bitmap", cls]} data-bitmap data-fit={fit}>
+  {
+    clean ? (
+      <img
+        src={clean}
+        alt={alt}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        style={`object-fit:${fit}`}
+      />
+    ) : (
+      <canvas class="bitmap-color" data-accent={accent} aria-hidden="true" />
+    )
+  }
+  <canvas class="bitmap-dither" aria-hidden="true"></canvas>
+</div>
+
+<script>
+  import { mountAll } from "./dither"
+  mountAll()
+</script>

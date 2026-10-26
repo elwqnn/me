@@ -1,0 +1,105 @@
+<canvas class="wipe" aria-hidden="true"></canvas>
+
+<style>
+  .wipe {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    image-rendering: pixelated;
+  }
+
+  :global(html.js) .wipe {
+    display: block;
+    background: var(--ink);
+    animation: failsafe 0s 2.5s forwards;
+  }
+
+  @keyframes failsafe {
+    to {
+      visibility: hidden;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .wipe {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  import { BAYER, INK, animate, easeInOut, reduced } from "./dither"
+
+  const canvas = document.querySelector<HTMLCanvasElement>(".wipe")
+  const CELL = 12
+
+  if (canvas && !reduced) {
+    const ctx = canvas.getContext("2d")!
+    let w = 0
+    let h = 0
+    let frame: ImageData
+    let buf: Uint32Array
+
+    const size = () => {
+      w = Math.ceil(window.innerWidth / CELL)
+      h = Math.ceil(window.innerHeight / CELL)
+      canvas.width = w
+      canvas.height = h
+      frame = ctx.createImageData(w, h)
+      buf = new Uint32Array(frame.data.buffer)
+    }
+
+    const paint = (c: number, cover: boolean) => {
+      const k = c * 1.02
+      for (let y = 0; y < h; y++) {
+        const row = (y & 7) * 8
+        const yv = (y / h) * 0.5
+        for (let x = 0; x < w; x++) {
+          const t = BAYER[row + (x & 7)] * 0.5 + yv
+          buf[y * w + x] = t < k === cover ? INK : 0
+        }
+      }
+      ctx.putImageData(frame, 0, 0)
+    }
+
+    const hide = () => {
+      canvas.style.display = "none"
+    }
+
+    const reveal = () => {
+      size()
+      paint(0, false)
+      canvas.style.background = "transparent"
+      animate(620, (k) => paint(k, false), easeInOut).then(hide)
+    }
+
+    reveal()
+
+    window.addEventListener("pageshow", (e) => {
+      if (e.persisted) reveal()
+    })
+
+    document.addEventListener("click", (e) => {
+      if (e.defaultPrevented || e.button !== 0) return
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const a = (e.target as Element).closest<HTMLAnchorElement>("a[href]")
+      if (!a || a.target || a.hasAttribute("download")) return
+      const url = new URL(a.href)
+      if (url.origin !== location.origin) return
+      if (url.pathname === location.pathname) return
+      if (url.pathname !== "/" && !url.pathname.startsWith("/projects/")) return
+      e.preventDefault()
+      size()
+      paint(0, true)
+      canvas.style.animation = "none"
+      canvas.style.display = "block"
+      animate(440, (k) => paint(k, true), easeInOut).then(() => {
+        location.href = a.href
+      })
+    })
+  }
+</script>
