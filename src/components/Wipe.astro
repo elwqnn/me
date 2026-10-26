@@ -70,7 +70,10 @@
       canvas.style.display = "none"
     }
 
+    let stall = 0
+
     const reveal = () => {
+      clearTimeout(stall)
       size()
       paint(0, false)
       canvas.style.background = "transparent"
@@ -99,6 +102,7 @@
       canvas.style.display = "block"
       animate(440, (k) => paint(k, true), easeInOut).then(() => {
         location.href = a.href
+        stall = window.setTimeout(reveal, 3000)
       })
     })
   }

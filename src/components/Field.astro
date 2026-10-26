@@ -8,6 +8,12 @@ const { class: cls } = Astro.props
 
 <div class:list={["field overflow-hidden", cls]} data-field>
   <canvas class="absolute top-0 left-0" aria-hidden="true"></canvas>
+  <p
+    class="hint label pointer-events-none absolute right-0 bottom-0 border-t border-l border-ink bg-paper px-3 py-2"
+  >
+    <span class="hidden [@media(hover:hover)]:inline">Move to light it</span>
+    <span class="[@media(hover:hover)]:hidden">Tap to light it</span>
+  </p>
 </div>
 
 <style>
@@ -19,6 +25,14 @@ const { class: cls } = Astro.props
 
   canvas {
     image-rendering: pixelated;
+  }
+
+  .hint {
+    display: none;
+  }
+
+  [data-live] .hint {
+    display: block;
   }
 </style>
 
@@ -151,8 +165,10 @@ void main() {
     resize()
 
     if (reduced) continue
+    el.dataset.live = ""
 
-    el.addEventListener("pointermove", (e) => {
+    let fade = 0
+    const light = (e: PointerEvent) => {
       const r = el.getBoundingClientRect()
       pointer.tx = (e.clientX - r.left) * scale
       pointer.ty = (r.bottom - e.clientY) * scale
@@ -161,8 +177,15 @@ void main() {
         pointer.y = pointer.ty
       }
       pointer.tz = 1
+      clearTimeout(fade)
+      if (e.pointerType === "touch")
+        fade = window.setTimeout(() => (pointer.tz = 0), 1600)
+    }
+    el.addEventListener("pointerdown", light)
+    el.addEventListener("pointermove", light)
+    el.addEventListener("pointerleave", (e) => {
+      if (e.pointerType !== "touch") pointer.tz = 0
     })
-    el.addEventListener("pointerleave", () => (pointer.tz = 0))
 
     let raf = 0
     const loop = (time: number) => {
