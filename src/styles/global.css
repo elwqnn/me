@@ -174,8 +174,6 @@ img {
 }
 
 .scramble-layer .u {
-  font-family: var(--mono);
-  font-weight: 400;
   opacity: 0.45;
 }
 
@@ -200,10 +198,35 @@ img {
   }
 }
 
+@keyframes settle {
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes lit {
+  to {
+    --h: 999;
+  }
+}
+
+@keyframes appear {
+  to {
+    visibility: visible;
+  }
+}
+
 @keyframes unveil {
   to {
     opacity: 1;
   }
+}
+
+html.js:not(.fonts) body {
+  visibility: hidden;
+  animation: appear 0s 3s forwards;
 }
 
 @media (prefers-reduced-motion: no-preference) {

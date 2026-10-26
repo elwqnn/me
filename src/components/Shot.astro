@@ -24,7 +24,7 @@ const pad = (n: number) => String(n).padStart(2, "0")
 <figure
   class:list={["shot", { hero, wide: isWide(src) }]}
   style={size ? `--ratio: ${size.width / size.height}` : undefined}
-  data-reveal
+  data-reveal="image"
 >
   <a class="frame" href={url} data-shot aria-label={`${alt}, open full size`}>
     <img
@@ -42,16 +42,6 @@ const pad = (n: number) => String(n).padStart(2, "0")
     <span>{name}</span>
   </figcaption>
 </figure>
-
-<script>
-  document.querySelectorAll<HTMLElement>(".shot").forEach((shot) => {
-    const img = shot.querySelector("img")
-    const done = () => shot.classList.add("is-loaded")
-    if (!img || img.complete) return done()
-    img.addEventListener("load", done, { once: true })
-    img.addEventListener("error", done, { once: true })
-  })
-</script>
 
 <style>
   .shot {
@@ -113,16 +103,22 @@ const pad = (n: number) => String(n).padStart(2, "0")
       transition: opacity 0.8s var(--ease-out) 0.6s;
     }
 
-    :global(html.js) .shot.is-in.is-loaded .frame {
+    :global(html.js) .shot.is-in .frame {
       clip-path: inset(0 0 0 0);
     }
 
-    :global(html.js) .shot.is-in.is-loaded img {
+    :global(html.js) .shot.is-in img {
       transform: none;
     }
 
-    :global(html.js) .shot.is-in.is-loaded figcaption {
+    :global(html.js) .shot.is-in figcaption {
       opacity: 1;
+    }
+
+    :global(html.js:not(.ready)) .shot .frame,
+    :global(html.js:not(.ready)) .shot img,
+    :global(html.js:not(.ready)) .shot figcaption {
+      animation: settle 0s 3s forwards;
     }
   }
 </style>

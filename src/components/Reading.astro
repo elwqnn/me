@@ -234,7 +234,7 @@ const html = groups
   }
 
   .text :global(.w) {
-    opacity: calc(0.38 + 0.62 * clamp(0, (var(--h) - var(--r)) * 2.4, 1));
+    opacity: calc(0.45 + 0.55 * clamp(0, (var(--h) - var(--r)) * 2.4, 1));
   }
 
   .text :global(a) {
@@ -265,6 +265,10 @@ const html = groups
 
     :global(html.js) .text :global(.w) {
       --r: 0;
+    }
+
+    :global(html.js) .text:not([style]) {
+      animation: lit 0s 3s forwards;
     }
   }
 

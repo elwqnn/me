@@ -423,6 +423,10 @@ const [cover, ...rest] = images
     :global(html.js) .plate-wrap.is-in {
       clip-path: inset(0 0 0 0);
     }
+
+    :global(html.js:not(.ready)) .plate-wrap {
+      animation: settle 0s 3s forwards;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -1,25 +1,55 @@
-const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*+=/<>"
+const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const LOWER = "abcdefghijklmnopqrstuvwxyz"
+const DIGITS = "0123456789"
+const SIGNS = "#%&*+=/<>"
 const reduce = matchMedia("(prefers-reduced-motion: reduce)")
 const texts = new WeakMap<HTMLElement, string>()
 const busy = new WeakSet<HTMLElement>()
 
-const glyph = () => GLYPHS[(Math.random() * GLYPHS.length) | 0]
+const pick = (set: string) => set[(Math.random() * set.length) | 0]
+const glyph = (c: string) =>
+  pick(
+    c >= "a" && c <= "z"
+      ? LOWER
+      : c >= "A" && c <= "Z"
+        ? UPPER
+        : c >= "0" && c <= "9"
+          ? DIGITS
+          : SIGNS
+  )
 const escape = (c: string) =>
   c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c
+
+function lines(el: HTMLElement) {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+  const range = document.createRange()
+  let text = ""
+  let top = -Infinity
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    for (const word of node.textContent!.matchAll(/\S+/g)) {
+      range.setStart(node, word.index)
+      range.setEnd(node, word.index + word[0].length)
+      const box = range.getBoundingClientRect()
+      if (text) text += box.top - top > box.height / 2 ? "\n" : " "
+      text += word[0]
+      top = box.top
+    }
+  }
+  return text
+}
 
 export function scramble(el: HTMLElement, delay = 0) {
   el.dataset.decoded = ""
   if (reduce.matches || busy.has(el)) return
-  const text =
-    texts.get(el) ?? (el.textContent ?? "").replace(/\s+/g, " ").trim()
-  texts.set(el, text)
-  const chars = [...text]
-  if (!chars.length) return
-
   const style = getComputedStyle(el)
   const multiline =
     el.getClientRects().length > 1 ||
     el.offsetHeight > parseFloat(style.lineHeight) * 1.5
+  const flat =
+    texts.get(el) ?? (el.textContent ?? "").replace(/\s+/g, " ").trim()
+  texts.set(el, flat)
+  const chars = [...(multiline ? lines(el) : flat)]
+  if (!chars.length) return
   const spread = Math.min(640, chars.length * 34)
   const appear = chars.map((_, i) =>
     delay ? delay + (i / chars.length) * spread * 0.5 : 0
@@ -28,12 +58,12 @@ export function scramble(el: HTMLElement, delay = 0) {
     (_, i) =>
       appear[i] + 140 + (i / chars.length) * spread * 0.6 + Math.random() * 180
   )
-  const shown = chars.map(glyph)
+  const shown = chars.map((c) => glyph(c))
 
   const layer = document.createElement("span")
   layer.className = "scramble-layer"
   layer.setAttribute("aria-hidden", "true")
-  if (!multiline) layer.style.whiteSpace = "nowrap"
+  layer.style.whiteSpace = multiline ? "pre" : "nowrap"
   busy.add(el)
   el.classList.add("is-scrambling")
   el.append(layer)
@@ -61,7 +91,7 @@ export function scramble(el: HTMLElement, delay = 0) {
         html += " "
         return
       }
-      if (swap && Math.random() < 0.7) shown[i] = glyph()
+      if (swap && Math.random() < 0.7) shown[i] = glyph(c)
       html += escape(shown[i])
     })
     if (open) html += "</span>"
@@ -107,8 +137,16 @@ function initReveal() {
     (entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue
-        entry.target.classList.add("is-in")
-        io.unobserve(entry.target)
+        const el = entry.target as HTMLElement
+        io.unobserve(el)
+        const show = () => el.classList.add("is-in")
+        const img = el.querySelector("img")
+        if (el.dataset.reveal !== "image" || !img || img.complete) {
+          show()
+          continue
+        }
+        img.addEventListener("load", show, { once: true })
+        img.addEventListener("error", show, { once: true })
       }
     },
     { rootMargin: "0px 0px -10% 0px" }
@@ -135,6 +173,19 @@ function initClock() {
   setInterval(tick, 15000)
 }
 
-initScramble()
-initReveal()
-initClock()
+const root = document.documentElement
+const fonts = Promise.all([
+  document.fonts.load('1em "Geist Variable"'),
+  document.fonts.load('1em "Geist Mono Variable"'),
+])
+const cap = new Promise((resolve) => setTimeout(resolve, 2500))
+
+Promise.race([fonts, cap])
+  .catch(() => {})
+  .then(() => {
+    root.classList.add("fonts")
+    initScramble()
+    initReveal()
+    initClock()
+    root.classList.add("ready")
+  })
