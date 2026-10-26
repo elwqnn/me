@@ -1,12 +1,28 @@
 services:
   app:
-    image: ghcr.io/elwqnn/me:latest
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
+    networks: [me-net]
+
+  newt:
+    image: fosrl/newt
+    container_name: newt-me
+    restart: unless-stopped
+    extra_hosts:
+      - "portal.seblcs.eu:172.17.0.1"
+    environment:
+      - PANGOLIN_ENDPOINT=${PANGOLIN_ENDPOINT:?}
+      - NEWT_ID=${NEWT_ID:?}
+      - NEWT_SECRET=${NEWT_SECRET:?}
+    networks: [me-net]
+
+networks:
+  me-net:
+    driver: bridge

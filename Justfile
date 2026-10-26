@@ -1,6 +1,3 @@
-REGISTRY := "ghcr.io/elwqnn"
-IMAGE := REGISTRY + "/me"
-
 default:
     @just --list
 
@@ -32,11 +29,7 @@ down:
 logs:
     docker compose logs -f
 
-push:
-    docker build -t {{ IMAGE }}:latest .
-    docker push {{ IMAGE }}:latest
-
 # - Deploy ---
 
 deploy:
-    git pull origin main && docker compose pull && docker compose up -d --force-recreate
+    git pull --ff-only origin main && docker compose up -d --build app
