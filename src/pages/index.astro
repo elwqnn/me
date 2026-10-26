@@ -112,8 +112,10 @@ const span = `${Math.min(...years)}–${Math.max(...years)}`
       </div>
 
       <div class="hint">
-        <span class="label xy" data-readout="xy">x +0.000 y +0.000</span>
-        <span class="label">
+        <span class="label xy" data-readout="xy" data-gl-only
+          >x +0.000 y +0.000</span
+        >
+        <span class="label" data-gl-only>
           <span class="on-hover">Click the surface to reseed it</span>
           <span class="on-touch">Tap the surface to reseed it</span>
         </span>
@@ -176,7 +178,7 @@ const span = `${Math.min(...years)}–${Math.max(...years)}`
 
   <footer class="foot">
     <span class="label">Elwann Guillemot — Back-end Developer</span>
-    <span class="label">
+    <span class="label" data-gl-only>
       Surface seed <span data-readout="seed">0000</span>
     </span>
     <a href="#work" class="label">Back to top <Arrow turn={-90} /></a>
@@ -271,6 +273,7 @@ const span = `${Math.min(...years)}–${Math.max(...years)}`
   }
 
   .list a {
+    width: fit-content;
     display: grid;
     grid-template-columns: 3.25rem auto 1fr;
     align-items: start;
@@ -647,10 +650,11 @@ const span = `${Math.min(...years)}–${Math.max(...years)}`
     }
 
     .list[data-active] a:not([data-on]) {
-      opacity: 0.62;
+      opacity: 0.85;
     }
 
     .list a {
+      width: auto;
       grid-template-columns: 2.25rem minmax(0, 1fr) auto;
       grid-template-areas:
         "idx title thumb"

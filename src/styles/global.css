@@ -125,6 +125,11 @@ button {
   white-space: nowrap;
 }
 
+:root[data-gl="off"] [data-reseed],
+:root[data-gl="off"] [data-gl-only] {
+  display: none;
+}
+
 .new {
   display: inline-flex;
   align-items: center;

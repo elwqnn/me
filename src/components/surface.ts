@@ -95,9 +95,10 @@ void main() {
   if (uFront >= 0.0) {
     vec2 dv = ps - uOrigin;
     float r = length(dv);
-    float wave = exp(-pow((r - uFront) * 7.0, 2.0)) * uFade;
+    float k = (r - uFront) * 7.0;
+    float wave = exp(-k * k) * uFade;
     vec2 q = p + dv / max(r, 1e-3) * wave * 0.14;
-    f = mix(field(q, uSeedA), field(q, uSeedB), smoothstep(uFront, uFront - 0.35, r));
+    f = mix(field(q, uSeedA), field(q, uSeedB), 1.0 - smoothstep(uFront - 0.35, uFront, r));
     ring = (1.0 - smoothstep(0.4, 1.6, abs(r - uFront) / max(fwidth(r), 1e-4))) * uFade;
     glow = wave * 0.08;
   } else {
@@ -113,7 +114,7 @@ void main() {
   minor *= crowd;
   major *= mix(0.35, 1.0, crowd);
 
-  float low = smoothstep(0.2, -0.65, f);
+  float low = 1.0 - smoothstep(-0.65, 0.2, f);
   float high = smoothstep(0.05, 0.8, f);
 
   vec3 bg = vec3(0.039, 0.043, 0.036);
@@ -128,7 +129,7 @@ void main() {
   col = mix(col, line, clamp(a, 0.0, 1.0));
 
   vec2 uv = fc / uRes - 0.5;
-  col *= mix(0.62, 1.0, smoothstep(0.95, 0.25, length(uv * vec2(1.0, 1.25))));
+  col *= mix(0.62, 1.0, 1.0 - smoothstep(0.25, 0.95, length(uv * vec2(1.0, 1.25))));
   col += (hash(fc + fract(uTime * 7.0) * 113.0) - 0.5) * (3.0 / 255.0);
 
   o = vec4(col, 1.0);
@@ -215,6 +216,10 @@ const pad = (seed: number) => String(seed).padStart(4, "0")
 const signed = (n: number) => (n < 0 ? "−" : "+") + Math.abs(n).toFixed(3)
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
 
+const glOff = () => {
+  document.documentElement.dataset.gl = "off"
+}
+
 export function mountSurface(root: HTMLElement) {
   const canvas = root.querySelector("canvas")
   if (!canvas) return
@@ -225,9 +230,9 @@ export function mountSurface(root: HTMLElement) {
     depth: false,
     stencil: false,
   })
-  if (!gl) return
+  if (!gl) return glOff()
   const prog = program(gl)
-  if (!prog) return
+  if (!prog) return glOff()
 
   gl.useProgram(prog)
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
@@ -275,6 +280,7 @@ export function mountSurface(root: HTMLElement) {
   let visible = true
   let raf = 0
   let last = 0
+  let lost = false
 
   const seedOut = document.querySelectorAll<HTMLElement>("[data-readout=seed]")
   const xyOut = document.querySelectorAll<HTMLElement>("[data-readout=xy]")
@@ -302,10 +308,11 @@ export function mountSurface(root: HTMLElement) {
     canvas.width = Math.max(1, Math.round(r.width * ratio))
     canvas.height = Math.max(1, Math.round(r.height * ratio))
     gl.viewport(0, 0, canvas.width, canvas.height)
-    if (still) draw()
+    draw()
   }
 
   const draw = () => {
+    if (lost) return
     gl.uniform2f(u.uRes, canvas.width, canvas.height)
     gl.uniform1f(u.uScale, scale)
     gl.uniform1f(u.uTime, time)
@@ -372,7 +379,7 @@ export function mountSurface(root: HTMLElement) {
   }
 
   const start = () => {
-    if (still || raf || !visible) return
+    if (still || lost || raf || !visible) return
     last = 0
     raf = requestAnimationFrame(tick)
   }
@@ -383,7 +390,7 @@ export function mountSurface(root: HTMLElement) {
   }
 
   const reseed = (x: number, y: number) => {
-    if (morphAt >= 0) seedA = seedB
+    if (morphAt >= 0) return
     seed = 1 + ((seed + Math.floor(Math.random() * 9990)) % 9999)
     seedB = seedOffset(seed)
     writeSeed(seed)
@@ -410,8 +417,10 @@ export function mountSurface(root: HTMLElement) {
   resize()
 
   canvas.addEventListener("webglcontextlost", () => {
+    lost = true
     stop()
     delete root.dataset.ready
+    glOff()
   })
 
   addEventListener(
