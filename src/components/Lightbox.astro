@@ -1,0 +1,183 @@
+---
+interface Props {
+  title: string
+}
+
+const { title } = Astro.props
+---
+
+<dialog class="lightbox" data-lightbox aria-label={`${title} images`}>
+  <div class="stage" data-lb-stage>
+    <img data-lb-img alt="" />
+  </div>
+  <div class="bar wrap mono">
+    <span class="count" data-lb-count></span>
+    <span class="caption dim" data-lb-caption></span>
+    <span class="controls">
+      <button type="button" class="link" data-lb-prev>Prev</button>
+      <button type="button" class="link" data-lb-next>Next</button>
+      <button type="button" class="link" data-lb-close autofocus>Close</button>
+    </span>
+  </div>
+</dialog>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>("[data-lightbox]")
+  const links = [...document.querySelectorAll<HTMLAnchorElement>("[data-shot]")]
+
+  if (dialog && links.length) {
+    const img = dialog.querySelector<HTMLImageElement>("[data-lb-img]")!
+    const stage = dialog.querySelector<HTMLElement>("[data-lb-stage]")!
+    const count = dialog.querySelector<HTMLElement>("[data-lb-count]")!
+    const caption = dialog.querySelector<HTMLElement>("[data-lb-caption]")!
+    const prev = dialog.querySelector<HTMLButtonElement>("[data-lb-prev]")!
+    const next = dialog.querySelector<HTMLButtonElement>("[data-lb-next]")!
+    const close = dialog.querySelector<HTMLButtonElement>("[data-lb-close]")!
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+    const pad = (n: number) => String(n).padStart(2, "0")
+    let current = 0
+    let token = 0
+
+    const show = async (i: number) => {
+      current = (i + links.length) % links.length
+      const t = ++token
+      const link = links[current]
+      const source = link.querySelector("img")
+      count.textContent = `${pad(current + 1)}/${pad(links.length)}`
+      caption.textContent = source?.alt ?? ""
+      const probe = new Image()
+      probe.src = link.href
+      await probe.decode().catch(() => {})
+      if (t !== token) return
+      img.src = link.href
+      img.alt = source?.alt ?? ""
+      img.classList.toggle("pixel", !!source?.classList.contains("pixel"))
+      if (reduce) return
+      img.animate(
+        [
+          { clipPath: "inset(100% 0 0 0)", transform: "translateY(32px)" },
+          { clipPath: "inset(0 0 0 0)", transform: "none" },
+        ],
+        { duration: 800, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
+      )
+    }
+
+    links.forEach((link, i) =>
+      link.addEventListener("click", (e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+        e.preventDefault()
+        img.removeAttribute("src")
+        dialog.showModal()
+        show(i)
+      })
+    )
+
+    if (links.length < 2) {
+      prev.hidden = true
+      next.hidden = true
+    }
+
+    prev.addEventListener("click", () => show(current - 1))
+    next.addEventListener("click", () => show(current + 1))
+    close.addEventListener("click", () => dialog.close())
+    dialog.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") show(current + 1)
+      if (e.key === "ArrowLeft") show(current - 1)
+    })
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog || e.target === stage) dialog.close()
+    })
+  }
+</script>
+
+<style>
+  .lightbox {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  .lightbox[open] {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    animation: fade 0.4s var(--ease-out);
+  }
+
+  .lightbox::backdrop {
+    background: transparent;
+  }
+
+  :global(html:has(.lightbox[open])) {
+    overflow: hidden;
+  }
+
+  .stage {
+    position: relative;
+    cursor: zoom-out;
+  }
+
+  .stage img {
+    --pad: clamp(16px, 4vw, 56px);
+    position: absolute;
+    inset: var(--pad);
+    margin: auto;
+    max-width: calc(100% - 2 * var(--pad));
+    max-height: calc(100% - 2 * var(--pad));
+    object-fit: contain;
+    cursor: default;
+  }
+
+  .stage img.pixel {
+    height: calc(100% - 2 * var(--pad));
+    width: auto;
+    image-rendering: pixelated;
+  }
+
+  .bar {
+    display: flex;
+    align-items: baseline;
+    gap: 2em;
+    padding-block: 18px 22px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .count {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .caption {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .controls {
+    display: flex;
+    gap: 1.6em;
+  }
+
+  .controls button {
+    text-transform: uppercase;
+    letter-spacing: inherit;
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lightbox[open] {
+      animation: none;
+    }
+  }
+</style>

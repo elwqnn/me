@@ -1,0 +1,633 @@
+---
+import type { CollectionEntry } from "astro:content"
+import Plate from "@/components/Plate.astro"
+import { cleanSrc } from "@/components/images"
+
+interface Props {
+  projects: CollectionEntry<"projects">[]
+}
+
+const { projects } = Astro.props
+const pad = (n: number) => String(n).padStart(2, "0")
+const items = projects.map((p, i) => ({
+  ...p.data,
+  slug: p.id,
+  no: pad(i + 1),
+  accent: p.data.accentColor ?? "#eeebe4",
+  cover: p.data.images[0] ? cleanSrc(p.data.images[0]) : undefined,
+}))
+---
+
+<section id="work" class="work wrap" aria-labelledby="work-title">
+  <div class="head grid">
+    <p class="label mono">
+      <span>(02)</span>
+      <span data-scramble>Work</span>
+    </p>
+    <div class="head-main">
+      <h2 id="work-title" class="title">
+        Selected work <span class="mono total" aria-hidden="true"
+          >{pad(items.length)}</span
+        >
+      </h2>
+      <p class="mono dim note">(the most interesting ones imo!)</p>
+    </div>
+  </div>
+
+  <div class="index" data-index>
+    <div class="cols mono dim" aria-hidden="true">
+      <span class="c-no">No.</span>
+      <span class="c-title">Project</span>
+      <span class="c-desc">About</span>
+      <span class="c-tags">Stack</span>
+      <span class="c-year">Year</span>
+    </div>
+    <ol class="list" data-reveal>
+      {
+        items.map((p, i) => (
+          <li style={`--i: ${i}; --accent: ${p.accent}`}>
+            <a class="row" href={`/projects/${p.slug}`} data-row>
+              <span class="c-no mono">
+                <i class="dot" aria-hidden="true" />
+                {p.no}
+              </span>
+              <span class="c-title">
+                <span class="name" data-scramble>
+                  {p.title}
+                </span>
+                {p.isNew && (
+                  <span class="new mono">
+                    <i aria-hidden="true" />
+                    <span data-scramble>New</span>
+                  </span>
+                )}
+              </span>
+              <span class="c-desc">{p.description}</span>
+              <span class="c-tags mono">
+                {p.tags.map((t) => (
+                  <span>{t}</span>
+                ))}
+              </span>
+              <span class="c-year mono">{p.year}</span>
+              <span class="thumb">
+                {p.cover ? (
+                  <img
+                    src={p.cover}
+                    alt={`${p.title} cover`}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <Plate
+                    title={p.title}
+                    description={p.description}
+                    tags={p.tags}
+                    year={p.year}
+                    accent={p.accent}
+                  />
+                )}
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+    <div class="preview" data-preview aria-hidden="true">
+      {
+        items.map((p) => (
+          <div class="item">
+            {p.cover ? (
+              <img
+                data-src={p.cover}
+                alt={`${p.title} cover`}
+                decoding="async"
+              />
+            ) : (
+              <Plate
+                title={p.title}
+                description={p.description}
+                tags={p.tags}
+                year={p.year}
+                accent={p.accent}
+              />
+            )}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<script>
+  const index = document.querySelector<HTMLElement>("[data-index]")
+  const preview = index?.querySelector<HTMLElement>("[data-preview]")
+  const list = index?.querySelector<HTMLElement>(".list")
+
+  if (
+    index &&
+    preview &&
+    list &&
+    matchMedia("(hover: hover) and (pointer: fine)").matches
+  ) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+    const items = [...preview.children] as HTMLElement[]
+    const rows = [...index.querySelectorAll<HTMLElement>("[data-row]")]
+    const curve = "cubic-bezier(0.76, 0, 0.24, 1)"
+    let x = 0
+    let y = 0
+    let tx = 0
+    let ty = 0
+    let tilt = 0
+    let active = -1
+    let layer = 1
+    let frame = 0
+    let visible = false
+    let reset = 0
+
+    const load = () =>
+      preview
+        .querySelectorAll<HTMLImageElement>("img[data-src]")
+        .forEach((img) => {
+          img.src = img.dataset.src!
+          img.removeAttribute("data-src")
+        })
+
+    const loop = () => {
+      const ease = reduce ? 1 : 0.14
+      const dx = tx - x
+      x += dx * ease
+      y += (ty - y) * ease
+      const lean = reduce ? 0 : Math.max(-7, Math.min(7, dx * 0.045))
+      tilt += (lean - tilt) * 0.12
+      preview.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${tilt}deg)`
+      const moving =
+        Math.abs(dx) > 0.2 || Math.abs(ty - y) > 0.2 || Math.abs(tilt) > 0.02
+      frame = moving ? requestAnimationFrame(loop) : 0
+    }
+
+    const aim = (cx: number, cy: number, snap: boolean) => {
+      const w = preview.offsetWidth
+      const h = preview.offsetHeight
+      tx = cx + 32 + w > innerWidth - 16 ? cx - w - 32 : cx + 32
+      ty = Math.min(Math.max(cy - h / 2, 16), innerHeight - h - 16)
+      if (snap) {
+        x = tx
+        y = ty
+      }
+      if (!frame) frame = requestAnimationFrame(loop)
+    }
+
+    const show = (i: number) => {
+      clearTimeout(reset)
+      visible = true
+      preview.classList.add("is-visible")
+      if (i === active) return
+      active = i
+      const item = items[i]
+      item.style.zIndex = String(++layer)
+      item.classList.add("is-on")
+      if (reduce) return
+      item.animate(
+        [{ clipPath: "inset(100% 0 0 0)" }, { clipPath: "inset(0 0 0 0)" }],
+        { duration: 700, easing: curve }
+      )
+      item.firstElementChild?.animate(
+        [{ transform: "scale(1.3)" }, { transform: "scale(1)" }],
+        { duration: 1100, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
+      )
+    }
+
+    const hide = () => {
+      visible = false
+      active = -1
+      preview.classList.remove("is-visible")
+      reset = window.setTimeout(
+        () => items.forEach((item) => item.classList.remove("is-on")),
+        400
+      )
+    }
+
+    index.addEventListener("pointerenter", load, { once: true })
+    list.addEventListener("pointerleave", hide)
+    list.addEventListener("pointermove", (e) => {
+      if (visible) aim(e.clientX, e.clientY, false)
+    })
+    rows.forEach((row, i) => {
+      row.addEventListener("pointerenter", (e) => {
+        const snap = !visible
+        show(i)
+        aim(e.clientX, e.clientY, snap)
+      })
+      row.addEventListener("focus", () => {
+        if (!row.matches(":focus-visible")) return
+        load()
+        const snap = !visible
+        const r = row.getBoundingClientRect()
+        show(i)
+        aim(r.left + r.width * 0.55, r.top + r.height / 2, snap)
+      })
+      row.addEventListener("blur", () => {
+        if (!list.matches(":hover")) hide()
+      })
+    })
+  }
+</script>
+
+<style>
+  .work {
+    margin-top: clamp(140px, 18vw, 260px);
+    scroll-margin-top: 32px;
+  }
+
+  .head {
+    align-items: start;
+  }
+
+  .head .label {
+    grid-column: 1 / 4;
+    padding-top: calc(var(--fs-read) * 0.16);
+  }
+
+  .head-main {
+    grid-column: 4 / -1;
+  }
+
+  .title {
+    font-size: var(--fs-read);
+    font-weight: 430;
+    line-height: 1.1;
+    letter-spacing: -0.032em;
+  }
+
+  .total {
+    vertical-align: super;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--fg-3);
+  }
+
+  .note {
+    margin-top: 16px;
+  }
+
+  .index {
+    margin-top: clamp(56px, 7vw, 104px);
+  }
+
+  .cols,
+  .row {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+  }
+
+  .cols {
+    padding-bottom: 14px;
+  }
+
+  .cols > * {
+    font: inherit;
+    color: inherit;
+    max-width: none;
+  }
+
+  .c-no {
+    grid-column: 1 / 4;
+  }
+
+  .c-title {
+    grid-column: 4 / 8;
+  }
+
+  .c-desc {
+    grid-column: 8 / 11;
+  }
+
+  .c-tags {
+    grid-column: 11 / 12;
+  }
+
+  .c-year {
+    grid-column: 12 / 13;
+    text-align: right;
+  }
+
+  .list {
+    position: relative;
+  }
+
+  .list::before,
+  .list > li::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--rule);
+    transform-origin: left;
+  }
+
+  .list::before {
+    top: 0;
+  }
+
+  .list > li {
+    position: relative;
+  }
+
+  .list > li::after {
+    bottom: 0;
+  }
+
+  .row {
+    position: relative;
+    align-items: baseline;
+    padding-block: clamp(20px, 2.1vw, 30px);
+    outline-offset: 6px;
+    transition: opacity 0.5s var(--ease-out);
+  }
+
+  .row::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.8s var(--ease-out);
+  }
+
+  .c-no {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dot {
+    position: absolute;
+    left: calc(var(--gutter) / -2 - 3.5px);
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    scale: 0;
+    transition: scale 0.45s var(--ease-out);
+  }
+
+  .c-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    column-gap: 14px;
+    row-gap: 6px;
+  }
+
+  .name {
+    font-size: var(--fs-row);
+    font-weight: 460;
+    line-height: 1.02;
+    letter-spacing: -0.028em;
+  }
+
+  .c-title > * {
+    transition: transform 0.7s var(--ease-out);
+  }
+
+  .new {
+    line-height: 1;
+    padding-top: 0.2em;
+  }
+
+  .c-desc {
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--fg-2);
+    max-width: 32ch;
+  }
+
+  .c-tags {
+    display: flex;
+    flex-direction: column;
+    color: var(--fg-3);
+  }
+
+  .c-year {
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .row:hover::after,
+  .row:focus-visible::after {
+    transform: scaleX(1);
+  }
+
+  .row:hover .dot,
+  .row:focus-visible .dot {
+    scale: 1;
+  }
+
+  .row:hover .c-no,
+  .row:focus-visible .c-no,
+  .row:hover .c-year,
+  .row:focus-visible .c-year {
+    color: var(--fg);
+  }
+
+  .list:has(.row:focus-visible) .row:not(:focus-visible) {
+    opacity: 0.3;
+  }
+
+  @media (hover: hover) {
+    .list:has(.row:hover) .row:not(:hover) {
+      opacity: 0.3;
+    }
+
+    .row:hover .c-title > * {
+      transform: translateX(14px);
+    }
+  }
+
+  .row:focus-visible .c-title > * {
+    transform: translateX(14px);
+  }
+
+  .thumb {
+    display: none;
+  }
+
+  .thumb img {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    background: rgb(238 235 228 / 0.06);
+  }
+
+  .preview {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    width: clamp(260px, 27vw, 420px);
+    aspect-ratio: 4 / 3;
+    pointer-events: none;
+    opacity: 0;
+    scale: 0.88;
+    transition:
+      opacity 0.35s var(--ease-out),
+      scale 0.6s var(--ease-out);
+    will-change: transform;
+  }
+
+  .preview.is-visible {
+    opacity: 1;
+    scale: 1;
+  }
+
+  .item {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    clip-path: inset(100% 0 0 0);
+    background: #151514;
+  }
+
+  .item.is-on {
+    clip-path: none;
+  }
+
+  .item img,
+  .item :global(.plate) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    aspect-ratio: auto;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .list::before,
+    :global(html.js) .list > li::after {
+      transform: scaleX(0);
+      transition: transform 1.2s var(--ease-inout);
+      transition-delay: calc(var(--i, 0) * 90ms);
+    }
+
+    :global(html.js) .list .row > * {
+      opacity: 0;
+      transform: translateY(16px);
+      transition:
+        opacity 0.9s var(--ease-out),
+        transform 1s var(--ease-out);
+      transition-delay: calc(var(--i) * 90ms + 240ms);
+    }
+
+    :global(html.js) .list.is-in::before,
+    :global(html.js) .list.is-in > li::after {
+      transform: none;
+    }
+
+    :global(html.js) .list.is-in .row > * {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .row,
+    .row::after,
+    .dot,
+    .c-title > *,
+    .preview {
+      transition: none;
+    }
+  }
+
+  @media (hover: none) {
+    .preview {
+      display: none;
+    }
+
+    .thumb {
+      display: block;
+    }
+  }
+
+  @media (hover: none) and (min-width: 900px) {
+    .row > :not(.c-no, .thumb) {
+      grid-row: 1 / span 2;
+    }
+
+    .thumb {
+      grid-column: 1 / 3;
+      grid-row: 2;
+      margin-top: 14px;
+    }
+  }
+
+  @media (max-width: 899px) {
+    .head .label,
+    .head-main {
+      grid-column: 1 / -1;
+    }
+
+    .head .label {
+      padding-top: 0;
+      margin-bottom: 20px;
+    }
+
+    .cols {
+      display: none;
+    }
+
+    .row {
+      grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+      row-gap: 10px;
+    }
+
+    .c-no {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .dot {
+      display: none;
+    }
+
+    .c-title {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .c-year {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .c-desc {
+      grid-column: 2 / -1;
+      grid-row: 2;
+    }
+
+    .c-tags {
+      grid-column: 2 / -1;
+      grid-row: 3;
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    .c-tags > span + span::before {
+      content: "·";
+      margin-inline: 0.6em;
+    }
+
+    .thumb {
+      grid-column: 2 / -1;
+      grid-row: 4;
+      margin-top: 8px;
+    }
+  }
+</style>

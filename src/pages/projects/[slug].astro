@@ -1,131 +1,489 @@
 ---
+import type { InferGetStaticPropsType } from "astro"
 import { getCollection, render } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ImageHero, ImageGrid } from "@/components/ImageGallery"
-import { ArrowLeft, ExternalLink, Github } from "@/components/icons"
+import SiteHeader from "@/components/SiteHeader.astro"
+import SiteFooter from "@/components/SiteFooter.astro"
+import Plate from "@/components/Plate.astro"
+import Shot from "@/components/Shot.astro"
+import Lightbox from "@/components/Lightbox.astro"
+import { cleanSrc } from "@/components/images"
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects")
-  return projects.map((project) => ({
+  const projects = (await getCollection("projects")).sort(
+    (a, b) => a.data.order - b.data.order
+  )
+  return projects.map((project, index) => ({
     params: { slug: project.id },
-    props: { project },
+    props: {
+      project,
+      index,
+      total: projects.length,
+      next: projects[(index + 1) % projects.length],
+    },
   }))
 }
 
-const { project } = Astro.props
+type Props = InferGetStaticPropsType<typeof getStaticPaths>
+
+const { project, index, total, next } = Astro.props
 const { Content } = await render(project)
-const { title, description, tags, images, links, githubUrl, liveUrl, year } =
-  project.data
+const {
+  title,
+  description,
+  tags,
+  images,
+  links,
+  githubUrl,
+  liveUrl,
+  year,
+  isNew,
+  accentColor,
+} = project.data
+
+const accent = accentColor ?? "#eeebe4"
+const pad = (n: number) => String(n).padStart(2, "0")
+const host = (url: string) => new URL(url).hostname.replace(/^www\./, "")
+const outbound = [
+  ...links,
+  ...(liveUrl ? [{ label: host(liveUrl), url: liveUrl }] : []),
+  ...(githubUrl ? [{ label: "GitHub", url: githubUrl }] : []),
+]
+const alt = (src: string) =>
+  `${title}, ${cleanSrc(src)
+    .split("/")
+    .pop()!
+    .replace(/\.\w+$/, "")
+    .replace(/[-_]+/g, " ")}`
+const [cover, ...rest] = images
 ---
 
 <Layout
   title={`${title} — Elwann Guillemot`}
   description={description}
-  image={images[0]}
+  image={cover && cleanSrc(cover)}
 >
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <a
-          href="/#projects"
-          class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-        >
-          <ArrowLeft
-            size={14}
-            className="transition-transform duration-200 group-hover:-translate-x-0.5"
-          />
-          Back to projects
+  <SiteHeader />
+  <main class="project" style={`--accent: ${accent}`}>
+    <section class="intro wrap grid">
+      <p class="crumbs mono">
+        <a class="link back" href="/#work">
+          <span aria-hidden="true">←</span>
+          <span data-scramble>Index</span>
         </a>
-        <ThemeToggle client:load />
-      </header>
+        <span class="dim">{pad(index + 1)}/{pad(total)}</span>
+        {
+          isNew && (
+            <span class="new">
+              <i aria-hidden="true" />
+              <span data-scramble>New</span>
+            </span>
+          )
+        }
+      </p>
+      <h1 class="title" data-scramble data-scramble-delay="120">{title}</h1>
+      <p class="desc">{description}</p>
+    </section>
 
-      <header class="mb-12">
-        <h1 class="mb-3 text-3xl font-bold">{title}</h1>
-        <p class="mb-6 text-lg text-muted-foreground">{description}</p>
-        <p class="text-xs text-muted-foreground/40">
-          {tags.join(" · ")}
-        </p>
-      </header>
-
-      <div class="mb-12">
-        <ImageHero images={images} title={title} client:load />
+    <dl class="meta wrap mono grid">
+      <div class="m-year">
+        <dt class="dim">Year</dt>
+        <dd>{year}</dd>
       </div>
-
-      <div class="mb-12 grid gap-12 md:grid-cols-3">
-        <div class="col-span-2">
-          <h2 class="mb-4 text-xl font-semibold">About the project</h2>
-          <div
-            class="space-y-4 text-muted-foreground [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors [&_a:hover]:text-primary"
-          >
-            <Content />
-          </div>
-        </div>
-
-        <div class="space-y-6">
-          <div>
-            <h3
-              class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase"
-            >
-              Year
-            </h3>
-            <p class="text-sm">{year}</p>
-          </div>
-
+      <div class="m-stack">
+        <dt class="dim">Stack</dt>
+        <dd>{tags.map((t) => <span>{t}</span>)}</dd>
+      </div>
+      <div class="m-links">
+        <dt class="dim">Links</dt>
+        <dd>
           {
-            (links.length > 0 || liveUrl || githubUrl) && (
-              <div>
-                <h3 class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  Links
-                </h3>
-                <div class="space-y-2">
-                  {links.map(({ label, url }) => (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      {label}
-                    </a>
-                  ))}
-                  {liveUrl && (
-                    <a
-                      href={liveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      Live Preview
-                    </a>
-                  )}
-                  {githubUrl && (
-                    <a
-                      href={githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <Github size={14} />
-                      Source Code
-                    </a>
-                  )}
-                </div>
-              </div>
-            )
+            outbound.map((l) => (
+              <a
+                class="out"
+                href={l.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span data-scramble>{l.label}</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+            ))
           }
-        </div>
+        </dd>
       </div>
+    </dl>
 
+    <div class="cover wrap">
       {
-        images.length > 1 && (
-          <div class="mb-12">
-            <ImageGrid images={images} title={title} client:load />
+        cover ? (
+          <Shot
+            src={cover}
+            alt={alt(cover)}
+            index={0}
+            total={images.length}
+            hero
+          />
+        ) : (
+          <div class="plate-wrap" data-reveal>
+            <Plate
+              title={title}
+              description={description}
+              tags={tags}
+              year={year}
+              accent={accent}
+            />
           </div>
         )
       }
     </div>
-  </div>
+
+    <section class="about wrap grid" aria-labelledby="about-title">
+      <h2 id="about-title" class="label mono">
+        <span>(01)</span>
+        <span data-scramble>About</span>
+      </h2>
+      <div class="prose">
+        <Content />
+      </div>
+    </section>
+
+    {
+      rest.length > 0 && (
+        <section class="gallery wrap" aria-labelledby="gallery-title">
+          <div class="g-head grid">
+            <h2 id="gallery-title" class="label mono">
+              <span>(02)</span>
+              <span data-scramble>Gallery</span>
+            </h2>
+            <p class="g-count mono dim">{pad(rest.length)} more images</p>
+          </div>
+          <div class="g-grid">
+            {rest.map((src, i) => (
+              <Shot
+                src={src}
+                alt={alt(src)}
+                index={i + 1}
+                total={images.length}
+              />
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    <nav class="next wrap grid" aria-label="Next project">
+      <p class="label mono">
+        <span>({rest.length > 0 ? "03" : "02"})</span>
+        <span data-scramble>Next</span>
+      </p>
+      <a
+        class="next-link"
+        href={`/projects/${next.id}`}
+        style={`--accent: ${next.data.accentColor ?? "#eeebe4"}`}
+      >
+        <span class="next-title" data-scramble>{next.data.title}</span>
+        <span class="next-arrow" aria-hidden="true">→</span>
+      </a>
+    </nav>
+  </main>
+  <SiteFooter />
+  {images.length > 0 && <Lightbox title={title} />}
 </Layout>
+
+<style>
+  .intro {
+    padding-top: clamp(72px, 14vh, 180px);
+    align-items: start;
+  }
+
+  .crumbs {
+    grid-column: 1 / 4;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 1.2em;
+    row-gap: 6px;
+    padding-top: 0.9em;
+  }
+
+  .back {
+    display: inline-flex;
+    gap: 0.6em;
+  }
+
+  .back span:first-child {
+    transition: transform 0.5s var(--ease-out);
+  }
+
+  .back:hover span:first-child {
+    transform: translateX(-4px);
+  }
+
+  .title {
+    grid-column: 4 / -1;
+    font-size: clamp(52px, 9.2vw, 156px);
+    font-weight: 500;
+    line-height: 0.92;
+    letter-spacing: -0.055em;
+    text-wrap: balance;
+    margin-left: -0.05em;
+  }
+
+  .desc {
+    grid-column: 4 / 11;
+    margin-top: 0.7em;
+    font-size: clamp(22px, 2.3vw, 36px);
+    font-weight: 430;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: var(--fg-2);
+    text-wrap: balance;
+  }
+
+  .meta {
+    margin-top: clamp(64px, 8vw, 120px);
+    row-gap: 28px;
+  }
+
+  .meta > div {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .meta dd {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .m-year {
+    grid-column: 1 / 4;
+  }
+
+  .m-stack {
+    grid-column: 4 / 8;
+  }
+
+  .m-links {
+    grid-column: 8 / -1;
+  }
+
+  .out {
+    display: inline-flex;
+    gap: 0.6em;
+    width: fit-content;
+    transition: color 0.3s var(--ease-out);
+  }
+
+  .out span:last-child {
+    color: var(--fg-3);
+    transition:
+      transform 0.5s var(--ease-out),
+      color 0.3s var(--ease-out);
+  }
+
+  .out:hover span:last-child,
+  .out:focus-visible span:last-child {
+    color: var(--accent);
+    transform: translate(2px, -2px);
+  }
+
+  .cover {
+    margin-top: clamp(40px, 5vw, 72px);
+  }
+
+  .cover :global(.plate) {
+    aspect-ratio: 21 / 9;
+  }
+
+  .about {
+    margin-top: clamp(96px, 12vw, 180px);
+    align-items: start;
+  }
+
+  .about .label,
+  .g-head .label,
+  .next .label {
+    grid-column: 1 / 4;
+  }
+
+  .about .label {
+    position: sticky;
+    top: 32px;
+    padding-top: 0.6em;
+  }
+
+  .prose {
+    grid-column: 4 / 11;
+    font-size: clamp(20px, 1.85vw, 30px);
+    font-weight: 420;
+    line-height: 1.38;
+    letter-spacing: -0.014em;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .prose :global(p + p) {
+    margin-top: 0.9em;
+  }
+
+  .prose :global(p:first-child) {
+    color: var(--fg);
+  }
+
+  .prose :global(a) {
+    color: var(--fg);
+    text-decoration: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.16em;
+    text-decoration-color: color-mix(in srgb, var(--accent) 70%, transparent);
+    transition: text-decoration-color 0.3s var(--ease-out);
+  }
+
+  .prose :global(a:hover) {
+    text-decoration-color: var(--fg);
+  }
+
+  .gallery {
+    margin-top: clamp(120px, 14vw, 220px);
+  }
+
+  .g-head {
+    align-items: baseline;
+    margin-bottom: clamp(28px, 3vw, 44px);
+  }
+
+  .g-count {
+    grid-column: 4 / -1;
+  }
+
+  .g-grid {
+    columns: 2;
+    column-gap: var(--gap);
+  }
+
+  .next {
+    margin-top: clamp(120px, 14vw, 220px);
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    align-items: start;
+  }
+
+  .next .label {
+    padding-top: 1.4em;
+  }
+
+  .next-link {
+    grid-column: 4 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.4em;
+    font-size: clamp(44px, 7.4vw, 124px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    outline-offset: 6px;
+  }
+
+  .next-title {
+    padding-bottom: 0.08em;
+    background: linear-gradient(var(--accent), var(--accent)) left bottom / 0
+      2px no-repeat;
+    transition: background-size 0.9s var(--ease-out);
+  }
+
+  .next-arrow {
+    color: var(--fg-3);
+    transition:
+      transform 0.7s var(--ease-out),
+      color 0.3s var(--ease-out);
+  }
+
+  .next-link:hover .next-title,
+  .next-link:focus-visible .next-title {
+    background-size: 100% 2px;
+  }
+
+  .next-link:hover .next-arrow,
+  .next-link:focus-visible .next-arrow {
+    color: var(--accent);
+    transform: translateX(0.12em);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .plate-wrap {
+      clip-path: inset(100% 0 0 0);
+      transition: clip-path 1.3s var(--ease-inout);
+    }
+
+    :global(html.js) .plate-wrap.is-in {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .back span:first-child,
+    .out span:last-child,
+    .next-title,
+    .next-arrow {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 899px) {
+    .crumbs,
+    .title,
+    .desc,
+    .about .label,
+    .prose,
+    .g-head .label,
+    .g-count,
+    .next .label,
+    .next-link {
+      grid-column: 1 / -1;
+    }
+
+    .crumbs {
+      padding-top: 0;
+      margin-bottom: 28px;
+    }
+
+    .m-year {
+      grid-column: 1 / 3;
+    }
+
+    .m-stack {
+      grid-column: 3 / -1;
+    }
+
+    .m-links {
+      grid-column: 1 / -1;
+    }
+
+    .cover :global(.plate) {
+      aspect-ratio: 4 / 3;
+    }
+
+    .about .label {
+      position: static;
+      margin-bottom: 20px;
+    }
+
+    .g-count {
+      margin-top: 6px;
+    }
+
+    .g-grid {
+      columns: 1;
+    }
+
+    .next .label {
+      padding-top: 0;
+      margin-bottom: 16px;
+    }
+  }
+</style>

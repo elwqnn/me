@@ -1,0 +1,292 @@
+---
+export type Segment = string | { text: string; href?: string; em?: boolean }
+
+interface Props {
+  no: string
+  label: string
+  segments: Segment[]
+  counter?: boolean
+}
+
+const { no, label, segments, counter = false } = Astro.props
+
+const groups = segments.map((segment) => {
+  const s = typeof segment === "string" ? { text: segment } : segment
+  return {
+    ...s,
+    lead: /^\s/.test(s.text),
+    trail: /\s$/.test(s.text),
+    words: s.text.trim().split(/\s+/).filter(Boolean),
+  }
+})
+const total = groups.reduce((n, g) => n + g.words.length, 0)
+const pad = (n: number) => String(n).padStart(3, "0")
+const escape = (s: string) =>
+  s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)
+const html = groups
+  .map((g, gi) => {
+    const space = gi > 0 && (groups[gi - 1].trail || g.lead) ? " " : ""
+    const words = g.words
+      .map((w, i) => `<span class="w">${i > 0 ? " " : ""}${escape(w)}</span>`)
+      .join("")
+    if (g.href)
+      return `${space}<a href="${escape(g.href)}" target="_blank" rel="noopener noreferrer">${words}</a>`
+    if (g.em) return `${space}<em>${words}</em>`
+    return space + words
+  })
+  .join("")
+---
+
+<div class="reading grid" data-reading-root>
+  {
+    Astro.slots.has("default") && (
+      <div class="lead">
+        <slot />
+      </div>
+    )
+  }
+  <aside class:list={["aside", { sticky: counter }]}>
+    <p class="label mono">
+      <span>({no})</span>
+      <span data-scramble>{label}</span>
+    </p>
+    {
+      counter && (
+        <div class="meter mono" aria-hidden="true">
+          <span class="bar">
+            <i data-read-bar />
+          </span>
+          <span class="meter-row">
+            <span data-read-status>Scroll to read</span>
+            <span class="count">
+              <span data-read-count>000</span>/{pad(total)}
+            </span>
+          </span>
+        </div>
+      )
+    }
+  </aside>
+  <p class="text" data-reading set:html={html} />
+</div>
+
+<script>
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+  const pad = (n: number) => String(n).padStart(3, "0")
+
+  document
+    .querySelectorAll<HTMLElement>("[data-reading-root]")
+    .forEach((root) => {
+      const text = root.querySelector<HTMLElement>("[data-reading]")!
+      const words = [...text.querySelectorAll<HTMLElement>(".w")]
+      const count = root.querySelector("[data-read-count]")
+      const status = root.querySelector("[data-read-status]")
+      const bar = root.querySelector<HTMLElement>("[data-read-bar]")
+
+      const report = (read: number) => {
+        if (count) count.textContent = pad(read)
+        if (status)
+          status.textContent =
+            read === 0
+              ? "Scroll to read"
+              : read < words.length
+                ? "Reading"
+                : "Read"
+        if (bar) bar.style.transform = `scaleX(${read / words.length})`
+      }
+
+      if (reduce) {
+        report(words.length)
+        return
+      }
+
+      let marks: number[] = []
+      let lines = 1
+      let lineHeight = 1
+      let line = 0
+      let last = -1
+
+      const update = () => {
+        const rect = text.getBoundingClientRect()
+        const end =
+          innerHeight + scrollY >= document.documentElement.scrollHeight - 2
+        const head = end ? lines + 1 : (line - rect.top) / lineHeight
+        text.style.setProperty("--h", head.toFixed(3))
+        const read = marks.filter((m) => head - m > 0.15).length
+        if (read === last) return
+        last = read
+        report(read)
+      }
+
+      const measure = () => {
+        const box = text.getBoundingClientRect()
+        const step = parseFloat(getComputedStyle(text).fontSize) * 0.5
+        let top = -Infinity
+        let index = -1
+        marks = words.map((w) => {
+          const r = w.getBoundingClientRect()
+          if (r.top - top > step) {
+            index++
+            top = r.top
+          }
+          return index + (r.left + r.width / 2 - box.left) / box.width
+        })
+        words.forEach((w, i) => w.style.setProperty("--r", marks[i].toFixed(3)))
+        lines = index + 1
+        lineHeight = box.height / lines
+        line = Math.min(
+          Math.max(box.top + scrollY, innerHeight * 0.4),
+          innerHeight * 0.72
+        )
+        root.style.setProperty("--line", `${line}px`)
+        root.style.setProperty("--lh", `${lineHeight}px`)
+        last = -1
+        update()
+      }
+
+      let frame = 0
+      const onScroll = () => {
+        if (frame) return
+        frame = requestAnimationFrame(() => {
+          frame = 0
+          update()
+        })
+      }
+
+      new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting)
+            addEventListener("scroll", onScroll, { passive: true })
+          else removeEventListener("scroll", onScroll)
+          onScroll()
+        },
+        { rootMargin: "25% 0px" }
+      ).observe(text)
+      new ResizeObserver(measure).observe(text)
+    })
+</script>
+
+<style>
+  .reading {
+    align-items: start;
+  }
+
+  .lead {
+    grid-column: 4 / -1;
+    grid-row: 1;
+  }
+
+  .aside {
+    grid-column: 1 / 4;
+    grid-row: 2;
+    padding-top: calc(var(--fs-read) * 0.16);
+    display: grid;
+    gap: 14px;
+    max-width: 240px;
+  }
+
+  .sticky {
+    position: sticky;
+    top: calc(var(--line, 40svh) - var(--lh, 0px) * 0.5);
+  }
+
+  .meter {
+    display: grid;
+    gap: 8px;
+    color: var(--fg-3);
+  }
+
+  .bar {
+    display: block;
+    height: 1px;
+    background: var(--rule);
+    overflow: hidden;
+  }
+
+  .bar i {
+    display: block;
+    height: 100%;
+    background: var(--fg);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s var(--ease-out);
+  }
+
+  .meter-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1em;
+  }
+
+  .count {
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text {
+    --h: 999;
+    grid-column: 4 / -1;
+    grid-row: 2;
+    font-size: var(--fs-read);
+    font-weight: 430;
+    line-height: 1.1;
+    letter-spacing: -0.032em;
+    text-wrap: pretty;
+  }
+
+  .text :global(.w) {
+    opacity: calc(0.38 + 0.62 * clamp(0, (var(--h) - var(--r)) * 2.4, 1));
+  }
+
+  .text :global(a) {
+    text-decoration: underline;
+    text-decoration-thickness: 0.05em;
+    text-underline-offset: 0.14em;
+    text-decoration-color: rgb(238 235 228 / 0.45);
+    transition: text-decoration-color 0.3s var(--ease-out);
+  }
+
+  .text :global(a:hover) {
+    text-decoration-color: currentColor;
+  }
+
+  .text :global(em) {
+    font-style: normal;
+    color: var(--warm);
+  }
+
+  .text :global(em .w) {
+    text-shadow: 0 0 0.6em rgb(242 214 166 / 0.3);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .text {
+      --h: 0;
+    }
+
+    :global(html.js) .text :global(.w) {
+      --r: 0;
+    }
+  }
+
+  @media (max-width: 899px) {
+    .lead,
+    .aside,
+    .text {
+      grid-column: 1 / -1;
+    }
+
+    .aside {
+      position: static;
+      padding-top: 0;
+      max-width: none;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .text {
+      grid-row: 3;
+    }
+  }
+</style>

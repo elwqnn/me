@@ -1,0 +1,95 @@
+---
+interface Props {
+  title: string
+  description: string
+  tags: string[]
+  year: string
+  accent: string
+  class?: string
+}
+
+const { title, description, tags, year, accent, class: className } = Astro.props
+
+const glyphs = "#%&*+=/<>.:"
+let seed = [...title].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
+const random = () => {
+  seed = (seed * 1664525 + 1013904223) >>> 0
+  return seed / 2 ** 32
+}
+const field = Array.from({ length: 28 }, () =>
+  Array.from({ length: 120 }, () =>
+    random() < 0.32 ? glyphs[(random() * glyphs.length) | 0] : " "
+  ).join("")
+).join("\n")
+---
+
+<div
+  class:list={["plate", className]}
+  style={`--accent: ${accent}`}
+  role="img"
+  aria-label={`${title}: ${description}`}
+>
+  <pre class="field" aria-hidden="true">{field}</pre>
+  <p class="top mono" aria-hidden="true">
+    <span>{tags.join(" / ")}</span>
+    <span>{year}</span>
+  </p>
+  <p class="title" aria-hidden="true">{title}</p>
+  <p class="desc mono" aria-hidden="true">{description}</p>
+</div>
+
+<style>
+  .plate {
+    position: relative;
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    aspect-ratio: 16 / 10;
+    padding: clamp(10px, 3.5%, 32px);
+    overflow: hidden;
+    background: var(--accent);
+    color: var(--ink);
+  }
+
+  .field {
+    position: absolute;
+    inset: -0.5em;
+    margin: 0;
+    font-family: var(--mono);
+    font-size: clamp(7px, 2.2cqi, 15px);
+    line-height: 1.6;
+    letter-spacing: 0.3em;
+    color: var(--ink);
+    opacity: 0.16;
+    white-space: pre;
+    user-select: none;
+  }
+
+  .top,
+  .title,
+  .desc {
+    position: relative;
+  }
+
+  .top {
+    display: flex;
+    justify-content: space-between;
+    gap: 1em;
+    font-size: clamp(8px, 1.9cqi, 13px);
+  }
+
+  .title {
+    font-size: 21cqi;
+    font-weight: 560;
+    line-height: 0.8;
+    letter-spacing: -0.065em;
+    margin-left: -0.04em;
+  }
+
+  .desc {
+    font-size: clamp(8px, 1.9cqi, 13px);
+    max-width: 34ch;
+    text-wrap: balance;
+  }
+</style>

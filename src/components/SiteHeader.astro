@@ -1,0 +1,88 @@
+---
+interface Props {
+  home?: boolean
+}
+
+const { home = false } = Astro.props
+const base = home ? "" : "/"
+---
+
+<header class="site-header wrap mono grid">
+  <a href="/" class="name" aria-current={home ? "page" : undefined}>
+    <span data-scramble>Elwann Guillemot</span>
+  </a>
+  <p class="role dim">
+    <span data-scramble data-scramble-delay="90">Back-end Developer</span>
+  </p>
+  <p class="place dim">
+    <span data-scramble data-scramble-delay="180">Lyon, FR</span>
+    <time data-clock></time>
+  </p>
+  <nav class="nav" aria-label="Main">
+    <a class="link" href={`${base}#work`}>
+      <span data-scramble data-scramble-delay="270">Work</span>
+    </a>
+    <a class="link" href={`${base}#contact`}>
+      <span data-scramble data-scramble-delay="360">Contact</span>
+    </a>
+  </nav>
+</header>
+
+<style>
+  .site-header {
+    position: relative;
+    z-index: 10;
+    padding-block: 22px;
+    align-items: baseline;
+  }
+
+  .name {
+    grid-column: 1 / 4;
+    justify-self: start;
+  }
+
+  .role {
+    grid-column: 4 / 8;
+  }
+
+  .place {
+    grid-column: 8 / 11;
+    display: flex;
+    gap: 1em;
+  }
+
+  .place time {
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nav {
+    grid-column: 11 / 13;
+    justify-self: end;
+    display: flex;
+    gap: 1.6em;
+  }
+
+  @media (max-width: 899px) {
+    .name {
+      grid-column: 1 / 4;
+    }
+
+    .role {
+      grid-column: 1 / 4;
+      grid-row: 2;
+    }
+
+    .place {
+      display: none;
+    }
+
+    .nav {
+      grid-column: 4 / 5;
+      grid-row: 1 / 3;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0;
+    }
+  }
+</style>

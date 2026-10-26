@@ -1,0 +1,48 @@
+---
+const year = new Date().getFullYear()
+---
+
+<footer class="site-footer wrap mono dim grid">
+  <p class="copy">© {year} Elwann Guillemot</p>
+  <p class="set">Set in Geist &amp; Geist Mono</p>
+  <a class="link top" href="#top">
+    <span data-scramble>Back to top</span>
+  </a>
+</footer>
+
+<style>
+  .site-footer {
+    padding-block: 28px 32px;
+    margin-top: clamp(96px, 12vw, 180px);
+    border-top: 1px solid var(--rule);
+    align-items: baseline;
+  }
+
+  .copy {
+    grid-column: 1 / 4;
+  }
+
+  .set {
+    grid-column: 4 / 8;
+  }
+
+  .top {
+    grid-column: 11 / 13;
+    justify-self: end;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 899px) {
+    .copy {
+      grid-column: 1 / 4;
+    }
+
+    .set {
+      display: none;
+    }
+
+    .top {
+      grid-column: 4 / 5;
+    }
+  }
+</style>
