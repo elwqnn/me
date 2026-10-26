@@ -1,0 +1,45 @@
+---
+interface Props {
+  n: string
+  id?: string
+}
+
+const { n, id } = Astro.props
+---
+
+<h2 class="label mono" id={id}>
+  <span class="n">{n}</span>
+  <span class="rule" aria-hidden="true"></span>
+  <span class="t"><slot /></span>
+</h2>
+
+<style>
+  .label {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 36px;
+    color: var(--ink-3);
+    font-weight: 500;
+    scroll-margin-top: 40px;
+  }
+
+  .n {
+    color: var(--orange-ink);
+    font-weight: 600;
+  }
+
+  .rule {
+    flex: 1;
+    height: 1px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--rule) 0 4px,
+      transparent 4px 8px
+    );
+  }
+
+  .t {
+    color: var(--ink);
+  }
+</style>

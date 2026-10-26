@@ -1,0 +1,247 @@
+---
+interface Props {
+  title: string
+  count: number
+}
+
+const { title, count } = Astro.props
+---
+
+<dialog id="lightbox" class="lightbox" aria-label={`${title} images`}>
+  <figure>
+    <img alt="" />
+    <figcaption class="mono">
+      <span class="lb-count"></span>
+      <a class="lb-open" target="_blank" rel="noopener">Open original ↗</a>
+    </figcaption>
+  </figure>
+  {
+    count > 1 && (
+      <>
+        <button
+          class="lb-nav lb-prev mono"
+          type="button"
+          aria-label="Previous image"
+        >
+          ←
+        </button>
+        <button
+          class="lb-nav lb-next mono"
+          type="button"
+          aria-label="Next image"
+        >
+          →
+        </button>
+      </>
+    )
+  }
+  <button class="lb-close mono" type="button" autofocus
+    >Close <kbd>Esc</kbd></button
+  >
+</dialog>
+
+<style>
+  .lightbox {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  .lightbox::backdrop {
+    background:
+      radial-gradient(circle at 1px 1px, var(--dot) 1px, transparent 1.6px) 11px
+        11px / 22px 22px,
+      rgb(232 226 213 / 0.94);
+  }
+
+  .lightbox[open] {
+    display: grid;
+    place-items: center;
+  }
+
+  figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin: 0;
+    padding: 64px 88px;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  img {
+    display: block;
+    max-width: min(100%, 1600px);
+    max-height: calc(100dvh - 180px);
+    width: auto;
+    height: auto;
+    padding: 10px;
+    background: var(--sheet);
+    box-shadow:
+      0 2px 3px rgb(58 40 15 / 0.18),
+      0 30px 60px -20px rgb(58 40 15 / 0.4);
+  }
+
+  figcaption {
+    display: flex;
+    gap: 20px;
+    color: var(--ink-3);
+  }
+
+  figcaption a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  figcaption a:hover {
+    color: var(--orange-ink);
+  }
+
+  button {
+    position: absolute;
+    border: 1px solid var(--rule);
+    background: var(--sheet);
+    color: var(--ink);
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      border-color 0.2s;
+  }
+
+  button:hover {
+    border-color: var(--orange);
+    color: var(--orange-ink);
+  }
+
+  .lb-nav {
+    top: 50%;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 18px;
+    translate: 0 -50%;
+  }
+
+  .lb-prev {
+    left: 24px;
+  }
+
+  .lb-next {
+    right: 24px;
+  }
+
+  .lb-close {
+    top: 20px;
+    right: 24px;
+    padding: 8px 12px;
+    border-radius: 999px;
+  }
+
+  kbd {
+    margin-left: 6px;
+    color: var(--ink-3);
+    font: inherit;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lightbox[open] img {
+      animation: lb-in 0.5s var(--ease-out);
+    }
+    .lightbox[open]::backdrop {
+      animation: lb-fade 0.3s ease;
+    }
+  }
+
+  @keyframes lb-in {
+    from {
+      opacity: 0;
+      scale: 0.94;
+      rotate: -2deg;
+    }
+  }
+
+  @keyframes lb-fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @media (max-width: 759px) {
+    figure {
+      padding: 64px 12px 96px;
+    }
+    img {
+      padding: 6px;
+      max-height: calc(100dvh - 200px);
+    }
+    .lb-nav {
+      top: auto;
+      bottom: 24px;
+      translate: none;
+    }
+    .lb-prev {
+      left: calc(50% - 60px);
+    }
+    .lb-next {
+      right: calc(50% - 60px);
+    }
+    kbd {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>("#lightbox")
+  if (dialog) {
+    const triggers = [
+      ...document.querySelectorAll<HTMLElement>("[data-lightbox]"),
+    ].sort((a, b) => Number(a.dataset.lightbox) - Number(b.dataset.lightbox))
+    const img = dialog.querySelector("img")!
+    const count = dialog.querySelector(".lb-count")!
+    const open = dialog.querySelector<HTMLAnchorElement>(".lb-open")!
+    let at = 0
+
+    const show = (i: number) => {
+      at = (i + triggers.length) % triggers.length
+      const source = triggers[at].querySelector("img")!
+      img.src = source.getAttribute("src")!
+      img.alt = source.alt
+      open.href = img.src
+      count.textContent = `${at + 1} / ${triggers.length}`
+    }
+
+    triggers.forEach((t, i) =>
+      t.addEventListener("click", () => {
+        show(i)
+        dialog.showModal()
+      })
+    )
+    dialog
+      .querySelector(".lb-prev")
+      ?.addEventListener("click", () => show(at - 1))
+    dialog
+      .querySelector(".lb-next")
+      ?.addEventListener("click", () => show(at + 1))
+    dialog
+      .querySelector(".lb-close")!
+      .addEventListener("click", () => dialog.close())
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog || e.target === dialog.querySelector("figure"))
+        dialog.close()
+    })
+    dialog.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") show(at + 1)
+      if (e.key === "ArrowLeft") show(at - 1)
+    })
+  }
+</script>

@@ -1,0 +1,121 @@
+---
+interface Props {
+  id: string
+  title: string
+  accent: string
+  number: string
+  year: string
+  tags: string[]
+  mark: string
+}
+
+const { id, title, accent, number, year, tags, mark } = Astro.props
+const ring = `${mark} · ${tags.join(" · ")} · `
+---
+
+<span class="stamp" style={`--accent:${accent}`}>
+  <span class="face">
+    <span class="row mono"><span>No.{number}</span><span>{year}</span></span>
+    <span class="title">{title}</span>
+    <span class="row mono">{tags.join(" / ")}</span>
+  </span>
+  <svg class="postmark" viewBox="0 0 240 140" aria-hidden="true">
+    <defs>
+      <path
+        id={`ring-${id}`}
+        d="M170 70m-47 0a47 47 0 1 1 94 0a47 47 0 1 1-94 0"></path>
+    </defs>
+    <circle cx="170" cy="70" r="62"></circle>
+    <circle cx="170" cy="70" r="36"></circle>
+    <text
+      ><textPath href={`#ring-${id}`} textLength="290">{ring}</textPath></text
+    >
+    <text x="170" y="76" text-anchor="middle" class="year">{year}</text>
+    <path
+      class="waves"
+      d="M0 48q10-7 20 0t20 0 20 0 20 0 20 0M0 62q10-7 20 0t20 0 20 0 20 0 20 0M0 76q10-7 20 0t20 0 20 0 20 0 20 0M0 90q10-7 20 0t20 0 20 0 20 0 20 0"
+    ></path>
+  </svg>
+</span>
+
+<style>
+  .stamp {
+    --hole: 6px;
+    --s: 17px;
+    position: relative;
+    display: block;
+    padding: 15px;
+    background: var(--sheet);
+    mask:
+      radial-gradient(var(--hole) at var(--hole) var(--hole), #0000 97%, #000)
+        calc(var(--hole) * -1) calc(var(--hole) * -1) / var(--s) var(--s) round,
+      linear-gradient(#000 0 0) 50% / calc(100% - 2 * var(--hole))
+        calc(100% - 2 * var(--hole)) no-repeat;
+    overflow: hidden;
+  }
+
+  .face {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 18px;
+    aspect-ratio: 4 / 5;
+    padding: 14px 14px 12px;
+    background:
+      repeating-linear-gradient(
+        -45deg,
+        rgb(0 0 0 / 0.07) 0 1px,
+        transparent 1px 5px
+      ),
+      var(--accent);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.18);
+    container-type: inline-size;
+  }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .title {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(48px, 30cqw, 78px);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+  }
+
+  .postmark {
+    position: absolute;
+    right: -24%;
+    bottom: 14%;
+    width: 112%;
+    fill: none;
+    stroke: rgb(29 27 24 / 0.72);
+    stroke-width: 2;
+    rotate: -14deg;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  .postmark text {
+    fill: rgb(29 27 24 / 0.75);
+    stroke: none;
+    font: 600 9.5px var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .postmark .year {
+    font-size: 15px;
+  }
+
+  .waves {
+    stroke-width: 1.8;
+  }
+</style>

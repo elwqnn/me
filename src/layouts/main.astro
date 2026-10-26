@@ -26,6 +26,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="author" content="Elwann Guillemot" />
+    <meta name="theme-color" content="#e8e2d5" />
 
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonicalURL} />
@@ -61,18 +62,10 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
     />
 
     <script is:inline>
-      const theme = localStorage.getItem("theme") ?? "system"
-      const isDark =
-        theme === "dark" ||
-        (theme === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      if (isDark) document.documentElement.classList.add("dark")
+      document.documentElement.classList.add("js")
     </script>
   </head>
   <body>
-    <div class="relative isolate min-h-screen">
-      <slot />
-      <div class="noise-overlay" aria-hidden="true"></div>
-    </div>
+    <slot />
   </body>
 </html>

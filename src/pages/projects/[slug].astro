@@ -1,131 +1,580 @@
 ---
 import { getCollection, render } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ImageHero, ImageGrid } from "@/components/ImageGallery"
-import { ArrowLeft, ExternalLink, Github } from "@/components/icons"
+import Topbar from "@/components/Topbar.astro"
+import Scrap from "@/components/Scrap.astro"
+import Stamp from "@/components/Stamp.astro"
+import Tear from "@/components/Tear.astro"
+import Label from "@/components/Label.astro"
+import Lightbox from "@/components/Lightbox.astro"
+import { clean, isWide, pad, rng } from "@/components/paper"
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects")
-  return projects.map((project) => ({
+  const projects = (await getCollection("projects")).sort(
+    (a, b) => a.data.order - b.data.order
+  )
+  const n = projects.length
+  return projects.map((project, i) => ({
     params: { slug: project.id },
-    props: { project },
+    props: {
+      project,
+      number: i + 1,
+      prev: projects[(i - 1 + n) % n],
+      next: projects[(i + 1) % n],
+    },
   }))
 }
 
-const { project } = Astro.props
+const { project, number, prev, next } = Astro.props
 const { Content } = await render(project)
-const { title, description, tags, images, links, githubUrl, liveUrl, year } =
-  project.data
+const {
+  title,
+  description,
+  tags,
+  images,
+  links,
+  githubUrl,
+  liveUrl,
+  year,
+  isNew,
+} = project.data
+const accent = project.data.accentColor ?? "var(--orange)"
+const slug = project.id
+const jitter = rng(`${slug}-pile`)
+const pile = images.slice(1).map((src, k) => ({
+  src,
+  k,
+  wide: isWide(src),
+  style: `left:calc(${Math.round((jitter() - 0.5) * 70)}px * var(--jit));top:${Math.round((jitter() - 0.5) * 40)}px;z-index:${Math.round(jitter() * 4)}`,
+  width: `${Math.round(82 + jitter() * 18)}%`,
+  rotate: +((jitter() - 0.5) * 12).toFixed(1),
+  speed: +((jitter() - 0.5) * 0.08).toFixed(3),
+}))
+const allLinks = [
+  ...links,
+  ...(liveUrl ? [{ label: "Live Preview", url: liveUrl }] : []),
+  ...(githubUrl ? [{ label: "Source Code", url: githubUrl }] : []),
+]
+const now = new Date().getFullYear()
 ---
 
 <Layout
   title={`${title} — Elwann Guillemot`}
   description={description}
-  image={images[0]}
+  image={images[0] && clean(images[0])}
 >
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <a
-          href="/#projects"
-          class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-        >
-          <ArrowLeft
-            size={14}
-            className="transition-transform duration-200 group-hover:-translate-x-0.5"
-          />
-          Back to projects
-        </a>
-        <ThemeToggle client:load />
-      </header>
+  <Topbar back />
+  <main class="desk" style={`--accent:${accent}`}>
+    <article class="sheet">
+      <Tear seed={`${slug}-top`} />
 
-      <header class="mb-12">
-        <h1 class="mb-3 text-3xl font-bold">{title}</h1>
-        <p class="mb-6 text-lg text-muted-foreground">{description}</p>
-        <p class="text-xs text-muted-foreground/40">
-          {tags.join(" · ")}
+      <header class="head">
+        <p class="meta mono">
+          <span class="n">{pad(number)}</span>
+          <span class="chip" aria-hidden="true"></span>
+          <span>Project</span>
+          <span>{year}</span>
+          {isNew && <span class="new">New</span>}
         </p>
+        <h1 class="title serif">{title}</h1>
+        <p class="desc">{description}</p>
+        <ul class="tags mono" aria-label="Tags">
+          {tags.map((t) => <li>{t}</li>)}
+        </ul>
+
+        {
+          images[0] ? (
+            <Scrap
+              class="cover"
+              seed={`${slug}-cover`}
+              src={images[0]}
+              alt={`${title} screenshot 1`}
+              index={0}
+              width="var(--cover-w)"
+              rotate={3}
+              speed={0.08}
+              look="print"
+              tape
+              eager
+              isNew={isNew}
+            />
+          ) : (
+            <Scrap
+              class="cover stamp-cover"
+              seed={`${slug}-stamp`}
+              width="var(--stamp-w)"
+              rotate={4}
+              speed={0.08}
+            >
+              <Stamp
+                id={slug}
+                title={title}
+                accent={accent}
+                number={pad(number)}
+                year={year}
+                tags={tags}
+                mark={
+                  new URL(liveUrl ?? githubUrl ?? "https://github.com").hostname
+                }
+              />
+            </Scrap>
+          )
+        }
       </header>
 
-      <div class="mb-12">
-        <ImageHero images={images} title={title} client:load />
-      </div>
-
-      <div class="mb-12 grid gap-12 md:grid-cols-3">
-        <div class="col-span-2">
-          <h2 class="mb-4 text-xl font-semibold">About the project</h2>
-          <div
-            class="space-y-4 text-muted-foreground [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors [&_a:hover]:text-primary"
-          >
-            <Content />
-          </div>
+      <section class="block" aria-labelledby="about">
+        <Label n="01" id="about">About the project</Label>
+        <div class="prose">
+          <Content />
         </div>
+      </section>
 
-        <div class="space-y-6">
+      <section class="block" aria-labelledby="details">
+        <Label n="02" id="details">Details</Label>
+        <dl class="details">
           <div>
-            <h3
-              class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase"
-            >
-              Year
-            </h3>
-            <p class="text-sm">{year}</p>
+            <dt class="mono">Year</dt>
+            <dd>{year}</dd>
           </div>
-
+          <div>
+            <dt class="mono">Stack</dt>
+            <dd>{tags.join(", ")}</dd>
+          </div>
           {
-            (links.length > 0 || liveUrl || githubUrl) && (
+            allLinks.length > 0 && (
               <div>
-                <h3 class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  Links
-                </h3>
-                <div class="space-y-2">
-                  {links.map(({ label, url }) => (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      {label}
-                    </a>
-                  ))}
-                  {liveUrl && (
-                    <a
-                      href={liveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      Live Preview
-                    </a>
-                  )}
-                  {githubUrl && (
-                    <a
-                      href={githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <Github size={14} />
-                      Source Code
-                    </a>
-                  )}
-                </div>
+                <dt class="mono">Links</dt>
+                <dd>
+                  <ul class="links">
+                    {allLinks.map(({ label, url }) => (
+                      <li>
+                        <a href={url} target="_blank" rel="noopener noreferrer">
+                          <span class="marker">{label}</span>
+                          <span class="arr" aria-hidden="true">
+                            ↗
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
               </div>
             )
           }
-        </div>
-      </div>
+        </dl>
+      </section>
 
-      {
-        images.length > 1 && (
-          <div class="mb-12">
-            <ImageGrid images={images} title={title} client:load />
+      <Tear seed={`${slug}-bottom`} edge="bottom" />
+    </article>
+
+    {
+      pile.length > 0 && (
+        <section class="pile-wrap" aria-labelledby="pile">
+          <Label n="03" id="pile">
+            The pile <span class="count">({pile.length} more)</span>
+          </Label>
+          <div class="pile">
+            {pile.map((s) => (
+              <Scrap
+                class:list={["pile-scrap", { wide: s.wide }]}
+                seed={`${slug}-pile-${s.k}`}
+                src={s.src}
+                alt={`${title} screenshot ${s.k + 2}`}
+                index={s.k + 1}
+                width={s.width}
+                rotate={s.rotate}
+                speed={s.speed}
+                tape={s.wide}
+                style={s.style}
+              />
+            ))}
           </div>
-        )
-      }
-    </div>
-  </div>
+          <p class="hint mono">
+            <span class="fine">
+              Drag the scraps around. Click one to see it full size.
+            </span>
+            <span class="touch">Tap a scrap to see it full size.</span>
+          </p>
+        </section>
+      )
+    }
+
+    <nav class="more" aria-label="More projects">
+      <a href={`/projects/${prev.id}`}>
+        <span class="mono">← Previous</span>
+        <span class="serif"><span class="marker">{prev.data.title}</span></span>
+      </a>
+      <a href={`/projects/${next.id}`} class="to-next">
+        <span class="mono">Next →</span>
+        <span class="serif"><span class="marker">{next.data.title}</span></span>
+      </a>
+    </nav>
+
+    <footer class="colophon mono">
+      <span>© {now} Elwann Guillemot</span>
+      <a href="/#contact">Get in touch</a>
+    </footer>
+  </main>
+
+  {images.length > 0 && <Lightbox title={title} count={images.length} />}
 </Layout>
+
+<style>
+  .desk {
+    --cover-w: clamp(200px, calc(50vw - var(--sheet-w) / 2 + 8px), 380px);
+    --stamp-w: clamp(190px, calc(50vw - var(--sheet-w) / 2 - 40px), 260px);
+    padding-top: 128px;
+  }
+
+  .head {
+    position: relative;
+    padding: 84px 0 16px;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-3);
+  }
+
+  .n {
+    color: var(--orange-ink);
+    font-weight: 600;
+  }
+
+  .chip {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+  }
+
+  .new {
+    margin-left: 4px;
+    padding: 3px 7px 2px;
+    border: 1.5px solid var(--orange-ink);
+    border-radius: 4px;
+    color: var(--orange-ink);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    rotate: -5deg;
+  }
+
+  .title {
+    margin-top: 28px;
+    font-size: clamp(64px, 8vw, 112px);
+    line-height: 0.88;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .desc {
+    max-width: 30ch;
+    margin-top: 28px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(26px, 2.6vw, 32px);
+    line-height: 1.15;
+    color: var(--ink-2);
+    text-wrap: balance;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 32px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 11px;
+  }
+
+  .tags li {
+    padding: 5px 9px 4px;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    color: var(--ink-2);
+  }
+
+  .head :global(.cover) {
+    position: absolute;
+    top: 44px;
+    left: calc(100% + var(--pad) - 36px);
+    z-index: 1;
+  }
+
+  .head :global(.stamp-cover) {
+    left: calc(100% + var(--pad) + 40px);
+    top: 64px;
+  }
+
+  .block {
+    padding: 72px 0 24px;
+  }
+
+  .block:last-of-type {
+    padding-bottom: 88px;
+  }
+
+  .prose {
+    display: grid;
+    gap: 1.1em;
+    font-size: 19px;
+    line-height: 1.7;
+    color: var(--ink-2);
+    text-wrap: pretty;
+  }
+
+  .prose :global(p) {
+    margin: 0;
+  }
+
+  .prose :global(a) {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: rgb(29 27 24 / 0.3);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition:
+      color 0.2s,
+      text-decoration-color 0.2s;
+  }
+
+  .prose :global(a:hover) {
+    color: var(--orange-ink);
+    text-decoration-color: var(--orange);
+  }
+
+  .details {
+    margin: 0;
+  }
+
+  .details > div {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 16px;
+    padding: 16px 0;
+    border-top: 1px dashed var(--rule);
+  }
+
+  .details > div:last-child {
+    border-bottom: 1px dashed var(--rule);
+  }
+
+  dt {
+    padding-top: 4px;
+    color: var(--ink-3);
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  .links {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .links a {
+    font-family: var(--serif);
+    font-size: 26px;
+    line-height: 1.15;
+    text-decoration: none;
+  }
+
+  .links a:hover .marker,
+  .links a:focus-visible .marker,
+  .more a:hover .marker,
+  .more a:focus-visible .marker {
+    background-size: 100% 100%;
+  }
+
+  .arr {
+    margin-left: 4px;
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--orange-ink);
+  }
+
+  .pile-wrap {
+    width: min(1180px, 100% - 48px);
+    margin: 120px auto 0;
+  }
+
+  .count {
+    color: var(--ink-3);
+  }
+
+  .pile {
+    --jit: 1;
+    columns: 3 280px;
+    column-gap: 40px;
+    padding-top: 12px;
+  }
+
+  .pile :global(.pile-scrap) {
+    margin: 0 auto 4px;
+    break-inside: avoid;
+  }
+
+  .pile :global(.pile-scrap.wide) {
+    column-span: all;
+    width: min(100%, 860px);
+    margin: 8px auto 56px;
+  }
+
+  .hint {
+    margin-top: 40px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 11px;
+  }
+
+  .hint .touch {
+    display: none;
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .hint .fine {
+      display: none;
+    }
+    .hint .touch {
+      display: inline;
+    }
+  }
+
+  .more {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    width: min(var(--sheet-w), 100% - 32px);
+    margin: 120px auto 0;
+  }
+
+  .more a {
+    display: grid;
+    gap: 8px;
+    padding-top: 18px;
+    border-top: 1px solid var(--ink);
+    text-decoration: none;
+  }
+
+  .more .mono {
+    color: var(--ink-3);
+  }
+
+  .more .serif {
+    font-size: clamp(28px, 3vw, 40px);
+    line-height: 1;
+  }
+
+  .more .to-next {
+    text-align: right;
+  }
+
+  .colophon {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(var(--sheet-w), 100% - 32px);
+    margin: 72px auto 0;
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+
+  .colophon a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .colophon a:hover {
+    color: var(--orange-ink);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .meta,
+    .title,
+    .desc,
+    .tags {
+      animation: fade-up 0.9s var(--ease-out) backwards;
+    }
+    .title {
+      animation-delay: 0.08s;
+    }
+    .desc {
+      animation-delay: 0.18s;
+    }
+    .tags {
+      animation-delay: 0.26s;
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      translate: 0 16px;
+    }
+  }
+
+  @media (max-width: 1099px) {
+    .desk {
+      padding-top: 56px;
+    }
+
+    .head :global(.cover),
+    .head :global(.stamp-cover) {
+      position: relative;
+      top: auto;
+      left: auto;
+      width: min(100%, 520px);
+      margin: 44px auto 0;
+    }
+
+    .head :global(.stamp-cover) {
+      width: min(66%, 260px);
+    }
+  }
+
+  @media (max-width: 599px) {
+    .head {
+      padding-top: 56px;
+    }
+
+    .prose {
+      font-size: 17px;
+    }
+
+    .details > div {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .pile {
+      --jit: 0.2;
+      columns: 2 130px;
+      column-gap: 18px;
+    }
+
+    .pile :global(.pile-scrap) {
+      margin-bottom: 14px;
+    }
+
+    .pile :global(.pile-scrap.wide) {
+      margin-bottom: 32px;
+    }
+
+    .more {
+      grid-template-columns: 1fr;
+    }
+
+    .more .to-next {
+      text-align: left;
+    }
+  }
+</style>
