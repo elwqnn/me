@@ -1,3 +1,6 @@
+VPS := "root@vps-016c426c"
+APP_DIR := "/home/axo/app/me"
+
 default:
     @just --list
 
@@ -32,4 +35,5 @@ logs:
 # - Deploy ---
 
 deploy:
-    git pull --ff-only origin main && docker compose up -d --build app
+    git push origin main
+    ssh {{ VPS }} "su - axo -c 'cd {{ APP_DIR }} && git pull --ff-only origin main && docker compose up -d --build app'"
