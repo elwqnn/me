@@ -1,4 +1,6 @@
 ---
+import { readFileSync } from "node:fs"
+import { imageMetadata } from "astro/assets/utils"
 import { getCollection, render } from "astro:content"
 import Layout from "@/layouts/main.astro"
 import SiteHeader from "@/components/SiteHeader.astro"
@@ -37,10 +39,16 @@ const {
   isNew,
 } = project.data
 
-const gallery = images.map((src) => ({
-  src: src.split("#")[0],
-  wide: src.endsWith("#wide"),
-}))
+const gallery = await Promise.all(
+  images.map(async (raw) => {
+    const src = raw.split("#")[0]
+    const { width, height } = await imageMetadata(
+      readFileSync(`public${src}`),
+      src
+    )
+    return { src, width, height, wide: raw.endsWith("#wide") }
+  })
+)
 const hasBody = Boolean(project.body?.trim())
 const outbound = [
   ...links,
@@ -87,6 +95,8 @@ const pad = (n: number) => String(n).padStart(2, "0")
         >
           <img
             src={gallery[0].src}
+            width={gallery[0].width}
+            height={gallery[0].height}
             alt={`${title}, image 1`}
             decoding="async"
             fetchpriority="high"
@@ -152,7 +162,7 @@ const pad = (n: number) => String(n).padStart(2, "0")
             <span class="num">{pad(gallery.length - 1)}</span>More images
           </p>
           <div class="cols">
-            {gallery.slice(1).map(({ src, wide }, i) => (
+            {gallery.slice(1).map(({ src, width, height, wide }, i) => (
               <button
                 class:list={["shot glass scroll-rise", { wide }]}
                 data-open={i + 1}
@@ -160,6 +170,8 @@ const pad = (n: number) => String(n).padStart(2, "0")
               >
                 <img
                   src={src}
+                  width={width}
+                  height={height}
                   alt={`${title}, image ${i + 2}`}
                   loading="lazy"
                   decoding="async"

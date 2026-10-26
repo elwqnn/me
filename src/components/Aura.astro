@@ -317,7 +317,8 @@ void main() {
       }
 
       const start = () => {
-        if (raf || reduced.matches || document.hidden) return
+        if (raf || reduced.matches || document.hidden || gl.isContextLost())
+          return
         last = 0
         raf = requestAnimationFrame(frame)
       }
@@ -340,6 +341,11 @@ void main() {
       reduced.addEventListener("change", () =>
         reduced.matches ? stop() : start()
       )
+      canvas.addEventListener("webglcontextlost", (e) => {
+        e.preventDefault()
+        stop()
+        delete root.dataset.live
+      })
       start()
     }
   }
