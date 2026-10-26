@@ -141,6 +141,8 @@ const { title } = Astro.props
 </style>
 
 <script>
+  import { freeze, reduced } from "@/lib/freeze"
+
   const dlg = document.querySelector<HTMLDialogElement>("[data-lightbox]")
   if (dlg) {
     const tiles = [
@@ -160,11 +162,15 @@ const { title } = Astro.props
       const thumb = tile.querySelector("img")
       img.src = thumb?.currentSrc || tile.href
       img.alt = thumb?.alt ?? ""
-      const full = new Image()
-      full.onload = () => {
-        if (tiles[index] === tile) img.src = full.src
+      if (reduced && /\.gif$/i.test(tile.href)) {
+        if (!img.src.startsWith("blob:")) freeze(img)
+      } else {
+        const full = new Image()
+        full.onload = () => {
+          if (tiles[index] === tile) img.src = full.src
+        }
+        full.src = tile.href
       }
-      full.src = tile.href
       cap.textContent = [".cap-lead", ".cap-rest"]
         .map((c) => tile.querySelector(c)?.textContent)
         .join(" · ")

@@ -97,6 +97,7 @@ const sizes = {
     --row-gap: calc(var(--gap) * 2.2);
     columns: var(--cols);
     column-gap: var(--gap);
+    row-gap: var(--row-gap);
   }
 
   .wall[data-variant="project"] {
@@ -148,6 +149,7 @@ const sizes = {
   .media {
     position: relative;
     display: block;
+    width: 100%;
     overflow: hidden;
     border-radius: 3px;
     background: color-mix(in oklab, var(--accent) 16%, var(--bg-2));
@@ -283,7 +285,7 @@ const sizes = {
 </style>
 
 <script>
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+  import { freeze, reduced } from "@/lib/freeze"
 
   const reveal = new IntersectionObserver(
     (entries) => {
@@ -298,6 +300,7 @@ const sizes = {
 
   for (const wall of document.querySelectorAll<HTMLElement>("[data-wall]")) {
     const tiles = [...wall.querySelectorAll<HTMLElement>(".tile")]
+    const medias = tiles.map((t) => t.querySelector<HTMLElement>(".media")!)
     let lastWidth = 0
 
     const layout = (force = false) => {
@@ -307,58 +310,164 @@ const sizes = {
       const cs = getComputedStyle(wall)
       const cols = Math.max(1, parseInt(cs.getPropertyValue("--cols")) || 1)
       const gap = parseFloat(cs.columnGap) || 0
-      const rowGap = parseFloat(cs.getPropertyValue("--row-gap")) || gap
+      const rowGap = parseFloat(cs.rowGap) || gap
       const colW = (width - gap * (cols - 1)) / cols
       const spans = tiles.map((t) =>
         t.hasAttribute("data-wide") ? Math.min(2, cols) : 1
       )
       tiles.forEach((t, i) => {
         t.style.width = `${colW * spans[i] + gap * (spans[i] - 1)}px`
+        medias[i].style.height = ""
       })
       const heights = tiles.map((t) => t.offsetHeight)
+      const mh = medias.map((m) => m.offsetHeight)
+      const extra = tiles.map(() => 0)
+      const tops = tiles.map(() => 0)
+      const stacks = Array.from({ length: cols }, () => [] as number[])
+      const last: number[] = []
+      const at: number[] = []
       const ys = new Array<number>(cols).fill(0)
-      const fit = (span: number) => {
+      const top = (col: number, span: number) =>
+        Math.max(...ys.slice(col, col + span))
+      const lowest = (span: number) => {
         let col = 0
-        let y = Infinity
+        let best = Infinity
         for (let c = 0; c + span <= cols; c++) {
-          const top = Math.max(...ys.slice(c, c + span))
-          if (top < y - 1) {
-            y = top
+          const t = top(c, span)
+          const score = ys
+            .slice(c, c + span)
+            .reduce((sum, y) => sum + 2 * (t - y), t)
+          if (score < best - 1) {
+            best = score
             col = c
           }
         }
-        const hole = ys
-          .slice(col, col + span)
-          .reduce((sum, h) => sum + y - h, 0)
-        return { col, y, hole }
+        return col
       }
-      const put = (i: number) => {
-        const { col, y } = fit(spans[i])
-        const t = tiles[i]
-        t.style.left = `${col * (colW + gap)}px`
-        t.style.top = `${y}px`
-        t.style.setProperty("--d", `${col * 90}ms`)
-        ys.fill(y + heights[i] + rowGap, col, col + spans[i])
+      const cost = (i: number) => heights[i] + rowGap
+      const crop = 0.2
+      const put = (i: number, col: number) => {
+        const span = spans[i]
+        tops[i] = top(col, span)
+        tiles[i].style.left = `${col * (colW + gap)}px`
+        tiles[i].style.setProperty("--d", `${col * 90}ms`)
+        ys.fill(tops[i] + cost(i), col, col + span)
+        at[i] = col
+        for (let c = col; c < col + span; c++) {
+          stacks[c] = span > 1 ? [] : [...stacks[c], i]
+          last[c] = i
+        }
       }
-      const tolerance = colW * 0.25
-      let held: number | null = null
-      let waited = 0
-      tiles.forEach((_, i) => {
-        if (held === null && spans[i] > 1 && fit(spans[i]).hole > tolerance) {
-          held = i
-          waited = 0
+      const grow = (c: number, need: number) => {
+        if (Math.abs(need) < 1) return
+        const dir = Math.sign(need)
+        const room = (j: number) => Math.max(0, mh[j] * crop - dir * extra[j])
+        const w = last[c]
+        if (w !== undefined && spans[w] > 1) {
+          const span = [...Array(spans[w]).keys()].map((k) => at[w] + k)
+          const take = Math.min(Math.abs(need), room(w))
+          if (take < 1 || span.some((k) => last[k] !== w)) return
+          extra[w] += dir * take
+          span.forEach((k) => (ys[k] += dir * take))
           return
         }
-        put(i)
-        if (
-          held !== null &&
-          (fit(spans[held]).hole <= tolerance || ++waited >= 3)
-        ) {
-          put(held)
-          held = null
+        const tail = stacks[c].slice(-3)
+        const rooms = tail.map(room)
+        const total = rooms.reduce((a, b) => a + b, 0)
+        if (total < 1) return
+        const take = Math.min(Math.abs(need), total)
+        let y = tops[tail[0]]
+        tail.forEach((j, k) => {
+          extra[j] += (dir * take * rooms[k]) / total
+          tops[j] = y
+          y += cost(j) + extra[j]
+        })
+        ys[c] = y
+      }
+      const level = (col: number, span: number) => {
+        const region = [...Array(span).keys()].map((k) => col + k)
+        const hi = Math.max(...region.map((c) => ys[c]))
+        region.forEach((c) => grow(c, hi - ys[c]))
+        const lo = Math.min(...region.map((c) => ys[c]))
+        region.forEach((c) => grow(c, lo - ys[c]))
+      }
+      const finish = (rest: number[]) => {
+        let best: number[] = []
+        let score = Infinity
+        const pick: number[] = []
+        const walk = (k: number, h: number[]) => {
+          if (k === rest.length) {
+            const s = Math.max(...h) - Math.min(...h)
+            if (s < score) {
+              score = s
+              best = [...pick]
+            }
+            return
+          }
+          for (let c = 0; c < cols; c++) {
+            pick[k] = c
+            walk(
+              k + 1,
+              h.map((y, n) => (n === c ? y + cost(rest[k]) : y))
+            )
+          }
+          if (k === rest.length - 1 && cols > 1) {
+            const t = Math.max(...h)
+            const s = h.reduce((sum, y) => sum + t - y, colW * 0.25)
+            if (s < score) {
+              score = s
+              best = [...pick.slice(0, k), -1]
+            }
+          }
         }
+        walk(0, ys)
+        rest.forEach((i, k) => {
+          if (best[k] >= 0) return put(i, best[k])
+          spans[i] = cols
+          tiles[i].style.width = `${width}px`
+          const img = tiles[i].querySelector("img")
+          if (img?.sizes) img.sizes = `${width}px`
+          heights[i] = tiles[i].offsetHeight
+          mh[i] = medias[i].offsetHeight
+          level(0, cols)
+          put(i, 0)
+        })
+      }
+      const queue = tiles.map((_, i) => i)
+      while (queue.length) {
+        if (queue.length <= 7 && queue.every((j) => spans[j] === 1)) {
+          finish(queue)
+          break
+        }
+        const i = queue.shift()!
+        const span = spans[i]
+        if (span > 1) {
+          for (;;) {
+            const col = lowest(span)
+            let low = col
+            for (let c = col; c < col + span; c++) if (ys[c] < ys[low]) low = c
+            let hole = top(col, span) - ys[low]
+            let pick = -1
+            queue.slice(0, 6).forEach((j, k) => {
+              const left = Math.abs(hole - cost(j))
+              if (spans[j] === 1 && left < hole) {
+                hole = left
+                pick = k
+              }
+            })
+            if (pick < 0) break
+            put(queue.splice(pick, 1)[0], low)
+          }
+        }
+        const col = lowest(span)
+        level(col, span)
+        put(i, col)
+      }
+      level(0, cols)
+      tiles.forEach((t, i) => {
+        t.style.top = `${tops[i]}px`
+        if (extra[i]) medias[i].style.height = `${mh[i] + extra[i]}px`
       })
-      if (held !== null) put(held)
       wall.style.height = `${Math.max(...ys) - rowGap}px`
     }
 
@@ -368,20 +477,9 @@ const sizes = {
     document.fonts.ready.then(() => layout(true))
     tiles.forEach((t) => reveal.observe(t))
 
-    if (reduced) {
-      for (const img of wall.querySelectorAll<HTMLImageElement>(
-        'img[src$=".gif"]'
-      )) {
-        const freeze = () => {
-          const c = document.createElement("canvas")
-          c.width = img.naturalWidth
-          c.height = img.naturalHeight
-          c.getContext("2d")?.drawImage(img, 0, 0)
-          c.toBlob((b) => b && (img.src = URL.createObjectURL(b)))
-        }
-        if (img.complete && img.naturalWidth) freeze()
-        else img.addEventListener("load", freeze, { once: true })
-      }
-    }
+    if (reduced)
+      wall
+        .querySelectorAll<HTMLImageElement>('img[src$=".gif"]')
+        .forEach(freeze)
   }
 </script>

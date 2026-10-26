@@ -1,5 +1,53 @@
-@import "tailwindcss";
 @import "@fontsource-variable/archivo/wdth.css";
+
+@layer reset {
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  h1,
+  h2 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  ol,
+  ul {
+    list-style: none;
+  }
+
+  img,
+  svg,
+  canvas {
+    display: block;
+    max-width: 100%;
+  }
+
+  img {
+    height: auto;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    cursor: pointer;
+  }
+}
 
 :root {
   --bg: #0c0c0b;
@@ -135,6 +183,7 @@ body:has(dialog[open]) {
 .shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  overflow-x: clip;
 }
 
 .side {
