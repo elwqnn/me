@@ -1,5 +1,6 @@
 ---
 import "@/styles/global.css"
+import font from "@fontsource-variable/host-grotesk/files/host-grotesk-latin-wght-normal.woff2?url"
 
 interface Props {
   title?: string
@@ -14,14 +15,23 @@ const {
 } = Astro.props
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
+const year = new Date().getFullYear()
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#edebe6" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link
+      rel="preload"
+      href={font}
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
     <link rel="canonical" href={canonicalURL} />
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -59,20 +69,71 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
         ],
       })}
     />
-
-    <script is:inline>
-      const theme = localStorage.getItem("theme") ?? "system"
-      const isDark =
-        theme === "dark" ||
-        (theme === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      if (isDark) document.documentElement.classList.add("dark")
-    </script>
   </head>
   <body>
-    <div class="relative isolate min-h-screen">
+    <div class="page" id="top">
       <slot />
-      <div class="noise-overlay" aria-hidden="true"></div>
+      <footer class="foot meta">
+        <span>© {year} Elwann Guillemot</span>
+        <span class="mute colophon">Set in Host Grotesk</span>
+        <a href="#top" class="u">Back to top</a>
+      </footer>
+      <div class="grain" aria-hidden="true"></div>
     </div>
   </body>
 </html>
+
+<style>
+  .page {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+  }
+
+  .foot {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gutter);
+    margin-top: auto;
+    padding: clamp(64px, 10vw, 160px) var(--gutter) var(--gutter);
+  }
+
+  .foot > :first-child {
+    grid-column: 1 / span 4;
+  }
+
+  .colophon {
+    grid-column: 5 / span 4;
+  }
+
+  .foot a {
+    grid-column: 9 / -1;
+    justify-self: end;
+  }
+
+  @media (max-width: 760px) {
+    .foot {
+      grid-template-columns: 1fr auto;
+    }
+
+    .foot > :first-child {
+      grid-column: 1;
+    }
+
+    .colophon {
+      display: none;
+    }
+
+    .foot a {
+      grid-column: 2;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html) {
+      scroll-behavior: smooth;
+    }
+  }
+</style>

@@ -1,0 +1,180 @@
+---
+interface Props {
+  current: "home" | "projects"
+}
+
+const { current } = Astro.props
+const base = current === "home" ? "" : "/"
+const nav = [
+  { key: "home", label: "Home", href: "/" },
+  { key: "projects", label: "Projects", href: `${base}#projects` },
+  { key: "contact", label: "Contact", href: `${base}#contact` },
+]
+---
+
+<header class="top meta">
+  <a href="/" class="id">
+    <span>Elwann Guillemot</span>
+    <span class="mute">Back-end Developer</span>
+  </a>
+  <p class="tag mute">Mostly Rust,<br />also visual and brand design</p>
+  <p class="where">
+    <span class="mute">Lyon, France</span>
+    <span
+      ><span data-clock>--:--</span> <span class="mute">local time</span></span
+    >
+  </p>
+  <nav aria-label="Main">
+    <ul>
+      {
+        nav.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              aria-current={
+                item.key === current
+                  ? current === "home"
+                    ? "page"
+                    : "true"
+                  : undefined
+              }
+            >
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</header>
+
+<style>
+  .top {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gutter);
+    align-items: start;
+    padding: var(--gutter);
+  }
+
+  .id,
+  .where {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .id {
+    grid-column: 1 / span 3;
+    justify-self: start;
+  }
+
+  .tag {
+    grid-column: 4 / span 3;
+  }
+
+  .where {
+    grid-column: 7 / span 2;
+  }
+
+  nav {
+    grid-column: 9 / -1;
+    justify-self: end;
+  }
+
+  ul {
+    display: flex;
+    gap: 1.25em;
+  }
+
+  nav a {
+    position: relative;
+    display: inline-block;
+  }
+
+  nav a::before,
+  nav a::after {
+    position: absolute;
+    top: 0;
+    opacity: 0;
+    transition:
+      opacity 0.35s var(--out),
+      translate 0.5s var(--out);
+  }
+
+  nav a::before {
+    content: "(";
+    right: 100%;
+    translate: 0.3em 0;
+  }
+
+  nav a::after {
+    content: ")";
+    left: 100%;
+    translate: -0.3em 0;
+  }
+
+  nav a[aria-current]::before,
+  nav a[aria-current]::after,
+  nav a:hover::before,
+  nav a:hover::after,
+  nav a:focus-visible::before,
+  nav a:focus-visible::after {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  :global(.blink) {
+    animation: blink 2s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0.2;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .top {
+      grid-template-columns: 1fr auto;
+      row-gap: 0.9em;
+    }
+
+    .id {
+      grid-column: 1;
+    }
+
+    .tag {
+      display: none;
+    }
+
+    .where {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    nav {
+      grid-column: 2;
+      grid-row: 1;
+    }
+  }
+</style>
+
+<script>
+  const el = document.querySelector<HTMLElement>("[data-clock]")
+  if (el) {
+    const fmt = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Paris",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+    const tick = () => {
+      const parts = fmt.formatToParts(new Date())
+      const get = (type: string) =>
+        parts.find((p) => p.type === type)?.value ?? "--"
+      el.innerHTML = `${get("hour")}<span class="blink">:</span>${get("minute")}`
+    }
+    tick()
+    setInterval(tick, 15000)
+  }
+</script>

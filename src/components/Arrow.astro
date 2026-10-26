@@ -1,0 +1,35 @@
+---
+interface Props {
+  dir?: "e" | "ne" | "n" | "s"
+  class?: string
+}
+
+const { dir = "ne", class: className } = Astro.props
+const turn = { e: 0, ne: -45, n: -90, s: 90 }[dir]
+---
+
+<svg
+  class:list={["arrow", className]}
+  style={`--turn:${turn}deg`}
+  viewBox="0 0 16 16"
+  width="1em"
+  height="1em"
+  aria-hidden="true"
+  focusable="false"
+>
+  <path
+    d="M2 8h11.5M8.5 3 13.5 8 8.5 13"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.2"></path>
+</svg>
+
+<style>
+  .arrow {
+    display: inline-block;
+    flex: none;
+    vertical-align: -0.12em;
+    transform: rotate(var(--turn));
+    transition: translate 0.5s var(--out);
+  }
+</style>

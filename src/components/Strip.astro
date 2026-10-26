@@ -1,0 +1,417 @@
+---
+import Plate from "./Plate.astro"
+import Arrow from "./Arrow.astro"
+import { pad } from "./image"
+
+interface Card {
+  slug: string
+  title: string
+  year: string
+  isNew: boolean
+  accent: string
+  description: string
+  tags: string[]
+  cover: { src: string; width: number; height: number } | null
+}
+
+interface Props {
+  projects: Card[]
+}
+
+const { projects } = Astro.props
+---
+
+<section id="projects" class="wrap" aria-labelledby="projects-title">
+  <div class="head meta">
+    <h2 id="projects-title">
+      <span class="label mute">Index</span> Selected projects
+    </h2>
+    <p class="hint mute" aria-hidden="true">
+      <span class="fine">Drag</span><span class="touch">Swipe</span>
+      <Arrow dir="e" />
+    </p>
+    <span class="bar" data-strip-bar aria-hidden="true"><span></span></span>
+    <span class="count mute">{pad(projects.length)}</span>
+  </div>
+  <ol class="strip" data-strip>
+    {
+      projects.map((p, i) => (
+        <li
+          class="card"
+          style={`--ar:${p.cover ? `${p.cover.width}/${p.cover.height}` : "1/1"};--accent:${p.accent}`}
+        >
+          <a href={`/projects/${p.slug}`} draggable="false">
+            <span class="frame">
+              {p.cover ? (
+                <img
+                  src={p.cover.src}
+                  alt={`${p.title} cover`}
+                  width={p.cover.width}
+                  height={p.cover.height}
+                  draggable="false"
+                  loading={i < 4 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              ) : (
+                <Plate
+                  title={p.title}
+                  top={p.description}
+                  bottom={p.tags.join(" · ")}
+                  color={p.accent}
+                />
+              )}
+              {p.isNew && (
+                <span class="new meta">
+                  <span class="dot" />
+                  New
+                </span>
+              )}
+            </span>
+            <span class="cap meta">
+              <span class="idx">{pad(i + 1)}</span>
+              <span class="reveal">
+                <span class="t">{p.title}</span>
+                <span class="y mute">{p.year}</span>
+              </span>
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  .wrap {
+    --h: clamp(
+      180px,
+      100svh - 0.25 * (100vw - 2 * var(--gutter)) - 250px,
+      440px
+    );
+    --space: clamp(10px, 1.1vw, 20px);
+  }
+
+  .head {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gutter);
+    align-items: center;
+    padding: 0 var(--gutter) 0.9em;
+  }
+
+  h2 {
+    grid-column: 1 / span 4;
+    font-weight: inherit;
+    font-size: inherit;
+  }
+
+  .hint {
+    grid-column: 5 / span 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+  }
+
+  .bar {
+    grid-column: 7 / span 5;
+    position: relative;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .bar > span {
+    position: absolute;
+    inset: -0.5px auto -0.5px 0;
+    width: calc(var(--w, 0.3) * 100%);
+    background: var(--ink);
+    translate: calc(var(--p, 0) * (1 / var(--w, 0.3) - 1) * 100%) 0;
+  }
+
+  .count {
+    grid-column: 12;
+    justify-self: end;
+  }
+
+  [data-static] .hint,
+  [data-static] .bar {
+    visibility: hidden;
+  }
+
+  .strip {
+    display: flex;
+    gap: var(--space);
+    padding: 0 var(--gutter);
+    scroll-padding-inline: var(--gutter);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .strip:global(.is-drag) {
+    cursor: grabbing;
+  }
+
+  .strip:global(.is-drag) a {
+    pointer-events: none;
+  }
+
+  .card {
+    flex: none;
+    width: calc(var(--h) * var(--ar));
+  }
+
+  .card a {
+    display: block;
+    -webkit-user-drag: none;
+  }
+
+  .card a:focus-visible {
+    outline: none;
+  }
+
+  .card a:focus-visible .frame {
+    outline: 1.5px solid var(--ink);
+    outline-offset: 4px;
+  }
+
+  .frame {
+    position: relative;
+    display: block;
+    height: var(--h);
+    overflow: hidden;
+    background: var(--paper-2);
+    transition:
+      opacity 0.6s var(--out),
+      filter 0.6s var(--out);
+  }
+
+  .frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 0 1px var(--line);
+    pointer-events: none;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.08);
+    will-change: transform;
+  }
+
+  .new {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    padding: 0.2em 0.65em 0.25em 0.55em;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .dot {
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .cap {
+    display: flex;
+    gap: 1.2em;
+    padding-top: 0.7em;
+  }
+
+  .idx {
+    flex: none;
+  }
+
+  .reveal {
+    display: flex;
+    flex: 1;
+    justify-content: space-between;
+    gap: 1em;
+    min-width: 0;
+    overflow: clip;
+  }
+
+  .reveal > span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fine {
+    display: none;
+  }
+
+  @media (hover: hover) {
+    .fine {
+      display: inline;
+    }
+
+    .touch {
+      display: none;
+    }
+
+    .reveal > span {
+      transform: translateY(110%);
+      transition: transform 0.7s var(--out);
+    }
+
+    .y {
+      transition-delay: 0.04s;
+    }
+
+    .card a:hover .reveal > span,
+    .card a:focus-visible .reveal > span {
+      transform: none;
+    }
+
+    .strip:has(a:hover) .card:not(:has(a:hover)) .frame {
+      opacity: 0.5;
+      filter: grayscale(1);
+    }
+  }
+
+  @media (max-width: 760px) {
+    .wrap {
+      --h: clamp(160px, 46vw, 240px);
+    }
+
+    .hint {
+      grid-column: 7 / span 6;
+      justify-self: end;
+    }
+
+    h2 {
+      grid-column: 1 / span 6;
+    }
+
+    .bar,
+    .count {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  const strip = document.querySelector<HTMLElement>("[data-strip]")
+  const bar = document.querySelector<HTMLElement>("[data-strip-bar]")
+
+  if (strip) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+    const imgs = [...strip.querySelectorAll<HTMLImageElement>(".frame img")]
+    const max = () => strip.scrollWidth - strip.clientWidth
+    const clamp = (v: number) => Math.min(max(), Math.max(0, v))
+
+    let raf = 0
+    const paint = () => {
+      raf = 0
+      const m = max()
+      bar?.style.setProperty(
+        "--w",
+        String(strip.clientWidth / strip.scrollWidth)
+      )
+      bar?.style.setProperty("--p", m > 0 ? String(strip.scrollLeft / m) : "0")
+      strip.closest("section")?.toggleAttribute("data-static", m <= 1)
+      if (reduce) return
+      const vw = innerWidth
+      const xs = imgs.map((img) => {
+        const r = img.parentElement!.getBoundingClientRect()
+        return (r.left + r.width / 2) / vw - 0.5
+      })
+      imgs.forEach((img, i) => {
+        const x = Math.max(-1, Math.min(1, xs[i]))
+        img.style.transform = `translate3d(${(x * -6).toFixed(2)}%,0,0) scale(1.08)`
+      })
+    }
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(paint)
+    }
+    strip.addEventListener("scroll", schedule, { passive: true })
+    addEventListener("resize", schedule)
+    schedule()
+
+    let dragging = false
+    let moved = 0
+    let pos = 0
+    let v = 0
+    let lastX = 0
+    let lastT = 0
+    let glide = 0
+
+    const stop = () => cancelAnimationFrame(glide)
+
+    strip.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse" || e.button !== 0 || max() <= 0) return
+      stop()
+      dragging = true
+      moved = 0
+      v = 0
+      pos = strip.scrollLeft
+      lastX = e.clientX
+      lastT = e.timeStamp
+    })
+
+    addEventListener("pointermove", (e) => {
+      if (!dragging) return
+      const dx = e.clientX - lastX
+      const dt = Math.max(1, e.timeStamp - lastT)
+      lastX = e.clientX
+      lastT = e.timeStamp
+      moved += Math.abs(dx)
+      if (moved > 5) strip.classList.add("is-drag")
+      pos = clamp(pos - dx)
+      strip.scrollLeft = pos
+      v = v * 0.7 + (-dx / dt) * 0.3
+    })
+
+    const release = (e: PointerEvent) => {
+      if (!dragging) return
+      dragging = false
+      strip.classList.remove("is-drag")
+      if (reduce || e.timeStamp - lastT > 90) return
+      let prev = performance.now()
+      const step = (now: number) => {
+        const dt = Math.min(48, now - prev)
+        prev = now
+        pos = clamp(pos + v * dt)
+        strip.scrollLeft = pos
+        v *= Math.exp(-dt / 340)
+        if (Math.abs(v) > 0.015 && pos > 0 && pos < max()) {
+          glide = requestAnimationFrame(step)
+        }
+      }
+      glide = requestAnimationFrame(step)
+    }
+    addEventListener("pointerup", release)
+    addEventListener("pointercancel", release)
+
+    strip.addEventListener(
+      "click",
+      (e) => {
+        if (moved > 5) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
+        moved = 0
+      },
+      true
+    )
+    strip.addEventListener("wheel", stop, { passive: true })
+    strip.addEventListener("touchstart", stop, { passive: true })
+  }
+</script>

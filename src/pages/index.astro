@@ -1,107 +1,264 @@
 ---
 import { getCollection } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ProjectShowcase } from "@/components/ProjectShowcase"
-import { ExternalLinkIcon } from "@/components/icons"
+import Top from "@/components/Top.astro"
+import Wght from "@/components/Wght.astro"
+import Strip from "@/components/Strip.astro"
+import Arrow from "@/components/Arrow.astro"
+import { shot } from "@/components/image"
 
-const projects = (await getCollection("projects")).sort(
-  (a, b) => a.data.order - b.data.order
-)
+const projects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((p) => ({
+    slug: p.id,
+    title: p.data.title,
+    year: p.data.year,
+    isNew: p.data.isNew,
+    accent: p.data.accentColor ?? "#d5d2ca",
+    description: p.data.description,
+    tags: p.data.tags,
+    cover: p.data.images[0] ? shot(p.data.images[0]) : null,
+  }))
+
+const contact = [
+  {
+    key: "Email",
+    value: "elwann.guillemot@epitech.eu",
+    href: "mailto:elwann.guillemot@epitech.eu",
+    external: false,
+  },
+  {
+    key: "GitHub",
+    value: "@elwqnn",
+    href: "https://github.com/elwqnn",
+    external: true,
+  },
+  {
+    key: "Resume",
+    value: "Resume, PDF",
+    href: "/documents/elwann_guillemot_resume.pdf",
+    external: false,
+  },
+]
 ---
 
 <Layout>
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <div class="flex flex-col">
-          <a
-            href="/"
-            class="text-sm font-medium transition-colors duration-200 hover:text-primary"
-          >
-            Elwann Guillemot
-          </a>
-          <span class="text-sm text-muted-foreground">Back-end Developer</span>
-        </div>
-        <ThemeToggle client:load />
-      </header>
+  <main>
+    <section class="hero">
+      <Top current="home" />
+      <div class="name">
+        <Wght as="h1" text="Elwann" label="Elwann Guillemot" fit intro />
+      </div>
+      <div class="strip">
+        <Strip projects={projects} />
+      </div>
+    </section>
 
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Today</h3>
-        <p class="text-muted-foreground">
-          I spent my fourth year abroad at the <a
-            href="https://www.hanze.nl/en"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Hanze University of Applied Sciences</a
-          > in Groningen, Netherlands. Now I'm back at <a
-            href="https://www.aktislab.fr/"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Aktislab</a
-          > in Lyon, France, for my final year. Most of my time goes into building
-          tools that make my life, and anyone else's, a little easier and more enjoyable. Things that feel
-          fast and leave room for the <span class="text-foreground"
-            >person using them</span
-          >.
-        </p>
-      </section>
+    <section class="today grid" aria-labelledby="today-title">
+      <h2 id="today-title" class="meta"><span class="label">Today</span></h2>
+      <p class="lead">
+        I spent my fourth year abroad at the <a
+          class="u"
+          href="https://www.hanze.nl/en"
+          target="_blank"
+          rel="noopener noreferrer">Hanze University of Applied Sciences</a
+        > in Groningen, Netherlands. Now I'm back at <a
+          class="u"
+          href="https://www.aktislab.fr/"
+          target="_blank"
+          rel="noopener noreferrer">Aktislab</a
+        > in Lyon, France, for my final year. Most of my time goes into building tools
+        that make my life, and anyone else's, a little easier and more enjoyable.
+        Things that feel fast and leave room for the <em>person using them</em>.
+      </p>
+    </section>
 
-      <section id="projects" class="py-12">
-        <h3 class="mb-6 text-lg font-medium">
-          Some of my projects <span
-            class="text-xs font-normal text-muted-foreground"
-            >(the most interesting ones imo!)</span
-          >
-        </h3>
-        <ProjectShowcase
-          projects={projects.map((p) => ({
-            slug: p.id,
-            title: p.data.title,
-            description: p.data.description,
-            tags: p.data.tags,
-            images: p.data.images,
-            accentColor: p.data.accentColor ?? "var(--primary)",
-            year: p.data.year,
-            isNew: p.data.isNew,
-          }))}
-          client:load
-        />
-      </section>
-
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Contact</h3>
-        <p class="mb-4 text-muted-foreground">
-          Feel free to reach out if you're looking to collaborate on a project,
-          have a job opportunity, or just want to connect.
-        </p>
-        <p class="mb-4 text-muted-foreground">
-          <a
-            href="https://github.com/elwqnn"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">@elwqnn</a
-          >
-          on github
-        </p>
-        <p class="mb-4 text-muted-foreground">
-          email me at
-          <a
-            href="mailto:elwann.guillemot@epitech.eu"
-            class="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors duration-200 hover:text-primary"
-          >
-            elwann.guillemot@epitech.eu
-            <ExternalLinkIcon size={16} />
-          </a>
-        </p>
-        <p class="text-muted-foreground">
-          or check out my <a
-            href="/documents/elwann_guillemot_resume.pdf"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            >resume</a
-          >.
-        </p>
-      </section>
-    </div>
-  </div>
+    <section id="contact" class="contact grid" aria-labelledby="contact-title">
+      <h2 id="contact-title" class="meta">
+        <span class="label">Contact</span>
+      </h2>
+      <p class="intro">
+        Feel free to reach out if you're looking to collaborate on a project,
+        have a job opportunity, or just want to connect.
+      </p>
+      <ul class="rows">
+        {
+          contact.map((c) => (
+            <li>
+              <a
+                href={c.href}
+                target={c.external ? "_blank" : undefined}
+                rel={c.external ? "noopener noreferrer" : undefined}
+              >
+                <span class="k meta mute">{c.key}</span>
+                <span class="v">{c.value}</span>
+                <Arrow dir={c.key === "Email" ? "e" : "ne"} class="go" />
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </main>
 </Layout>
+
+<style>
+  .hero {
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+    overflow-x: clip;
+  }
+
+  .name {
+    container-type: inline-size;
+    margin: clamp(16px, 3.5svh, 56px) var(--gutter) 0;
+  }
+
+  .name :global(h1) {
+    line-height: 0.74;
+  }
+
+  .strip {
+    margin-top: auto;
+    padding: clamp(24px, 3.5svh, 56px) 0 var(--gutter);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gutter);
+    padding: 0 var(--gutter);
+  }
+
+  .grid > h2 {
+    grid-column: 1 / span 3;
+    font-weight: inherit;
+    padding-top: 0.55em;
+  }
+
+  .today {
+    padding-top: clamp(96px, 14vw, 220px);
+  }
+
+  .lead {
+    grid-column: 4 / -1;
+    max-width: 30em;
+    font-size: clamp(26px, 1rem + 2.3vw, 54px);
+    line-height: 1.1;
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    color: var(--mute);
+    text-wrap: pretty;
+  }
+
+  .lead a,
+  .lead em {
+    color: var(--ink);
+    font-style: normal;
+  }
+
+  .contact {
+    padding-top: clamp(96px, 14vw, 220px);
+    row-gap: clamp(32px, 4vw, 64px);
+  }
+
+  .intro {
+    grid-column: 4 / span 5;
+    max-width: 34em;
+    color: var(--mute);
+    text-wrap: pretty;
+  }
+
+  .rows {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+  }
+
+  .rows li {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .rows a {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gutter);
+    align-items: center;
+    padding: 0.18em 0 0.24em;
+    font-size: clamp(26px, 0.6rem + 4.4vw, 88px);
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+
+  .k {
+    grid-column: 1 / span 3;
+    letter-spacing: 0.005em;
+  }
+
+  .v {
+    grid-column: 4 / span 8;
+    font-weight: 300;
+    overflow-wrap: anywhere;
+    transition: font-weight 0.6s var(--out);
+  }
+
+  .rows :global(.go) {
+    grid-column: 12;
+    justify-self: end;
+    width: 0.7em;
+    height: 0.7em;
+  }
+
+  @media (hover: hover) {
+    .rows a:hover .v {
+      font-weight: 520;
+    }
+
+    .rows a:hover :global(.go) {
+      translate: 0.12em 0;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .hero {
+      min-height: 0;
+    }
+
+    .name {
+      margin-top: 18vw;
+    }
+
+    .strip {
+      padding-top: 14vw;
+    }
+
+    .grid > h2,
+    .lead,
+    .intro {
+      grid-column: 1 / -1;
+    }
+
+    .grid > h2 {
+      padding: 0 0 1.2em;
+    }
+
+    .rows a {
+      grid-template-columns: 1fr auto;
+      row-gap: 0.4em;
+      padding: 0.6em 0 0.7em;
+      font-size: clamp(22px, 6.2vw, 40px);
+    }
+
+    .k {
+      grid-column: 1 / -1;
+    }
+
+    .v {
+      grid-column: 1;
+    }
+
+    .rows :global(.go) {
+      grid-column: 2;
+    }
+  }
+</style>

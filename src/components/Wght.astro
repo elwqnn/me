@@ -1,0 +1,305 @@
+---
+interface Props {
+  text: string
+  label?: string
+  as?: "h1" | "h2" | "p" | "span"
+  class?: string
+  fit?: boolean
+  intro?: boolean
+}
+
+const {
+  text,
+  label = text,
+  as: Tag = "span",
+  class: className,
+  fit = false,
+  intro = false,
+} = Astro.props
+
+let i = 0
+const words = text
+  .split(" ")
+  .map((word) => [...word].map((ch) => ({ ch, i: i++ })))
+---
+
+<Tag
+  class:list={["wght", { fit, intro }, className]}
+  data-wght
+  data-fit={fit ? "" : undefined}
+  data-intro={intro ? "" : undefined}
+>
+  <span class="sr">{label}</span>
+  <span class="vis" aria-hidden="true"
+    >{
+      words.map((word, w) => (
+        <>
+          {w > 0 && " "}
+          <span class="w">
+            {word.map(({ ch, i }) => (
+              <span class="c" style={`--i:${i}`}>
+                {ch}
+              </span>
+            ))}
+          </span>
+        </>
+      ))
+    }</span
+  >
+</Tag>
+
+<style>
+  .wght {
+    display: block;
+    font-weight: 300;
+  }
+
+  .vis {
+    display: block;
+  }
+
+  .w {
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  .c {
+    display: inline-block;
+    font-weight: 300;
+  }
+
+  .fit {
+    font-size: calc(100cqw / var(--fit, 2.965));
+    letter-spacing: 0;
+  }
+
+  .fit .vis {
+    white-space: nowrap;
+    margin-left: calc(var(--lsb, 0.067) * -1em);
+  }
+
+  .fit .c + .c {
+    margin-left: var(--gap, -0.03em);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .intro .c {
+      animation: rise 1.3s var(--out) both;
+      animation-delay: calc(var(--i) * 55ms + 80ms);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.28em);
+    }
+  }
+</style>
+
+<script>
+  const MIN = 300
+  const MAX = 800
+  const TRACK = -0.03
+  const INTRO_MS = 1700
+
+  type Item = {
+    el: HTMLElement
+    chars: HTMLElement[]
+    cur: number[]
+    pts: { x: number; y: number }[] | null
+    box: DOMRect | null
+    radius: number
+    visible: boolean
+    fit: { min: number[]; max: number[] } | null
+    intro: boolean
+    phase: number
+  }
+
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+  const fine = matchMedia("(hover: hover) and (pointer: fine)").matches
+
+  const items: Item[] = [
+    ...document.querySelectorAll<HTMLElement>("[data-wght]"),
+  ].map((el, n) => {
+    const chars = [...el.querySelectorAll<HTMLElement>(".c")]
+    return {
+      el,
+      chars,
+      cur: chars.map(() => MIN),
+      pts: null,
+      box: null,
+      radius: 0,
+      visible: false,
+      fit: null,
+      intro: el.hasAttribute("data-intro"),
+      phase: n * 1.9,
+    }
+  })
+
+  const measure = (item: Item) => {
+    const size = parseFloat(getComputedStyle(item.el).fontSize)
+    const widths = (w: number) => {
+      item.chars.forEach((c) => (c.style.fontWeight = String(w)))
+      return item.chars.map((c) => c.getBoundingClientRect().width / size)
+    }
+    item.el.style.setProperty("--gap", "0em")
+    const max = widths(MAX)
+    const min = widths(MIN)
+    item.chars.forEach((c) => (c.style.fontWeight = ""))
+    item.fit = { min, max }
+    const ctx = document.createElement("canvas").getContext("2d")!
+    ctx.font = `${MIN} 100px ${getComputedStyle(item.el).fontFamily}`
+    const head = ctx.measureText(item.chars[0].textContent!.trim())
+    const tail = ctx.measureText(item.chars.at(-1)!.textContent!.trim())
+    const lsb = -head.actualBoundingBoxLeft / 100
+    const rsb = (tail.width - tail.actualBoundingBoxRight) / 100
+    const total = min.reduce((a, b) => a + b, 0)
+    item.el.style.setProperty("--lsb", lsb.toFixed(4))
+    item.el.style.setProperty(
+      "--fit",
+      (total + (item.chars.length - 1) * TRACK - lsb - rsb).toFixed(4)
+    )
+    item.el.style.setProperty("--gap", `${TRACK}em`)
+  }
+
+  let px = 0
+  let py = 0
+  let pointer = false
+  let raf = 0
+  let last = 0
+  let ready = false
+  let introStart = 0
+
+  const invalidate = () => {
+    for (const item of items) item.pts = null
+  }
+
+  const locate = (item: Item) => {
+    item.box = item.el.getBoundingClientRect()
+    item.radius = parseFloat(getComputedStyle(item.el).fontSize) * 1.15
+    item.pts = item.chars.map((c) => {
+      const r = c.getBoundingClientRect()
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+    })
+  }
+
+  const field = (d: number, r: number) => {
+    const t = Math.max(0, 1 - d / r)
+    return MIN + (MAX - MIN) * t * t * (3 - 2 * t)
+  }
+
+  const frame = (now: number) => {
+    raf = 0
+    const dt = last ? Math.min(64, now - last) : 16
+    last = now
+    const k = 1 - Math.exp(-dt / 120)
+    const introT = (now - introStart) / INTRO_MS
+    let busy = false
+
+    for (const item of items) if (item.visible && !item.pts) locate(item)
+
+    for (const item of items) {
+      if (!item.visible || !item.pts || !item.box) continue
+      const box = item.box
+      let vx: number | null = null
+      let vy = box.top + box.height / 2
+      if (item.intro && introT < 1) {
+        const e = 1 - Math.pow(1 - introT, 3)
+        vx = box.left - item.radius + (box.width + item.radius * 2) * e
+        busy = true
+      } else if (!fine) {
+        vx =
+          box.left +
+          box.width * (0.5 + 0.55 * Math.sin(now * 0.00042 + item.phase))
+        vy += Math.cos(now * 0.0003 + item.phase) * box.height * 0.3
+        busy = true
+      } else if (pointer) {
+        vx = px
+        vy = py
+      }
+
+      let extra = 0
+      item.chars.forEach((c, i) => {
+        const p = item.pts![i]
+        const target =
+          vx === null
+            ? MIN
+            : field(Math.hypot(vx - p.x, (vy - p.y) * 1.25), item.radius)
+        const next = item.cur[i] + (target - item.cur[i]) * k
+        if (Math.abs(target - next) > 0.4) busy = true
+        if (Math.abs(next - item.cur[i]) > 0.05) {
+          c.style.fontWeight = next.toFixed(1)
+        }
+        item.cur[i] = next
+        if (item.fit) {
+          extra +=
+            ((item.fit.max[i] - item.fit.min[i]) * (next - MIN)) / (MAX - MIN)
+        }
+      })
+
+      if (item.fit && item.chars.length > 1) {
+        const gap = TRACK - extra / (item.chars.length - 1)
+        item.el.style.setProperty("--gap", `${gap.toFixed(4)}em`)
+      }
+    }
+
+    if (busy) wake()
+    else last = 0
+  }
+
+  const wake = () => {
+    if (ready && !raf) raf = requestAnimationFrame(frame)
+  }
+
+  document.fonts
+    .load(`${MIN} 1em "Host Grotesk Variable"`)
+    .catch(() => [])
+    .then(() => document.fonts.ready)
+    .then(() => {
+      for (const item of items)
+        if (item.el.hasAttribute("data-fit")) measure(item)
+      if (reduce) return
+      ready = true
+      introStart = performance.now()
+
+      const io = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          const item = items.find((it) => it.el === entry.target)
+          if (item) item.visible = entry.isIntersecting
+        }
+        invalidate()
+        wake()
+      })
+      for (const item of items) io.observe(item.el)
+
+      addEventListener(
+        "pointermove",
+        (e) => {
+          if (e.pointerType !== "mouse") return
+          px = e.clientX
+          py = e.clientY
+          pointer = true
+          wake()
+        },
+        { passive: true }
+      )
+      document.addEventListener("pointerout", (e) => {
+        if (e.relatedTarget) return
+        pointer = false
+        wake()
+      })
+      addEventListener(
+        "scroll",
+        () => {
+          invalidate()
+          wake()
+        },
+        { passive: true, capture: true }
+      )
+      addEventListener("resize", () => {
+        invalidate()
+        wake()
+      })
+    })
+</script>
