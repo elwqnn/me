@@ -8,7 +8,6 @@
   --ink: #1a1815;
   --ink-soft: #5c564c;
   --rule: #d6cfc1;
-  --rule-strong: #a69e90;
 
   --serif: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
   --sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
@@ -98,7 +97,7 @@ button {
   text-decoration-line: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
-  text-decoration-color: var(--rule-strong);
+  text-decoration-color: var(--ink-soft);
   transition: text-decoration-color 0.3s var(--ease-out);
 }
 

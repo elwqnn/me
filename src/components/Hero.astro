@@ -8,30 +8,31 @@ interface Props {
 }
 
 const { projects } = Astro.props
-const byId = new Map(projects.map((p) => [p.id, p]))
-const year = (id: string) => byId.get(id)?.data.year ?? ""
 
-const script: (string | { id: string })[] = [
-  "Elwann Guillemot writes Rust for the back end and designs the brands around it — lately ",
-  { id: "gpui-shell" },
-  ", a Wayland shell drawn on the GPU, and ",
-  { id: "scylla" },
-  ", a CI/CD engine; also ",
-  { id: "sonar" },
-  ", a music recommender, ",
-  { id: "topiq" },
-  ", a small message broker, a ",
-  { id: "wfc" },
-  ` crate and, back in ${year("area")}, `,
-  { id: "area" },
-  ".",
-]
+const lead =
+  "Elwann Guillemot writes Rust for the back end and designs the brands around it — lately "
+
+const connectors: Record<string, [string, string]> = {
+  "gpui-shell": ["", ", a Wayland shell drawn on the GPU, and "],
+  scylla: ["", ", a CI/CD engine; also "],
+  sonar: ["", ", a music recommender, "],
+  topiq: ["", ", a small message broker, "],
+  wfc: ["a ", " crate and, "],
+  area: ["back in {year}, ", "."],
+}
+
+const ids = projects.map((p) => p.id)
+const missing = ids.filter((id) => !(id in connectors))
+const stale = Object.keys(connectors).filter((id) => !ids.includes(id))
+if (missing.length || stale.length)
+  throw new Error(
+    `Hero sentence and projects differ. Missing: ${missing.join(", ") || "none"}. Stale: ${stale.join(", ") || "none"}.`
+  )
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;")
 
 let w = 0
-let n = 0
 const words = (text: string) =>
   text
     .split(/(\s+)/)
@@ -43,16 +44,17 @@ const words = (text: string) =>
     )
     .join("")
 
-const sentence = script
-  .map((seg) => {
-    if (typeof seg === "string") return words(seg)
-    const project = byId.get(seg.id)
-    if (!project) return ""
-    const { title, accentColor, isNew } = project.data
-    const link = `<a class="pl" href="/projects/${project.id}" data-peek="${project.id}" style="--accent: ${esc(accentColor ?? "var(--ink)")}; --n: ${n++}">${words(title)}</a>`
-    return isNew ? `${link}<sup class="new" style="--i: ${w}">New</sup>` : link
-  })
-  .join("")
+const sentence =
+  words(lead) +
+  projects
+    .map((project, n) => {
+      const { title, accentColor, isNew, year } = project.data
+      const [before, after] = connectors[project.id]
+      const link = `<a class="pl" href="/projects/${project.id}" data-peek="${project.id}" style="--accent: ${esc(accentColor ?? "var(--ink)")}; --n: ${n}">${words(title)}</a>`
+      const badge = isNew ? `<sup class="new" style="--i: ${w}">New</sup>` : ""
+      return words(before.replace("{year}", year)) + link + badge + words(after)
+    })
+    .join("")
 
 const peeks = projects.map((p) => ({
   p,
@@ -108,12 +110,12 @@ const peeks = projects.map((p) => ({
     let open = false
     let timer = 0
 
-    const target = (px: number, py: number) => {
+    const target = (px: number, py: number, top = py) => {
       const w = peek.offsetWidth
       const h = peek.offsetHeight
       const gap = 32
       tx = Math.max(16, Math.min(px + gap * 0.75, innerWidth - w - 16))
-      ty = py + gap + h > innerHeight - 16 ? py - gap - h : py + gap
+      ty = py + gap + h > innerHeight - 16 ? top - gap - h : py + gap
     }
 
     const frame = () => {
@@ -141,6 +143,15 @@ const peeks = projects.map((p) => ({
       if (!raf) raf = requestAnimationFrame(frame)
     }
 
+    let focused: HTMLAnchorElement | null = null
+    let settle = 0
+
+    const place = (link: HTMLAnchorElement) => {
+      const rect = link.getBoundingClientRect()
+      target(rect.left, rect.bottom - 16, rect.top + 16)
+      show(link.dataset.peek ?? "", true)
+    }
+
     const hide = () => {
       timer = window.setTimeout(() => {
         open = false
@@ -163,17 +174,24 @@ const peeks = projects.map((p) => ({
       link.addEventListener("pointerleave", hide)
       link.addEventListener("focus", () => {
         if (!link.matches(":focus-visible")) return
-        const rect = link.getBoundingClientRect()
-        target(rect.left, rect.bottom - 16)
-        show(id, true)
+        focused = link
+        place(link)
       })
-      link.addEventListener("blur", hide)
+      link.addEventListener("blur", () => {
+        focused = null
+        hide()
+      })
     })
 
     addEventListener(
       "scroll",
       () => {
-        if (open) hide()
+        if (open && [...links].some((l) => l.matches(":hover"))) hide()
+        if (!focused) return
+        clearTimeout(settle)
+        settle = window.setTimeout(() => {
+          if (focused) place(focused)
+        }, 120)
       },
       { passive: true }
     )
@@ -229,7 +247,7 @@ const peeks = projects.map((p) => ({
     text-decoration-thickness: 0.045em;
     text-underline-offset: 0.12em;
     text-decoration-skip-ink: auto;
-    text-decoration-color: var(--rule-strong);
+    text-decoration-color: var(--ink-soft);
     transition:
       opacity 0.6s var(--ease-out),
       text-decoration-color 0.45s var(--ease-out),
