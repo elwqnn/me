@@ -1,0 +1,109 @@
+---
+interface Props {
+  home?: boolean
+}
+
+const { home = false } = Astro.props
+const base = home ? "" : "/"
+---
+
+<header class="top wrap">
+  <a href="/" class="mark" aria-label="Elwann Guillemot, home">
+    <span class="dot" aria-hidden="true"></span>
+    Elwann Guillemot
+  </a>
+  <nav aria-label="Main">
+    <a href={`${base}#work`}>Work</a>
+    <a href={`${base}#today`}>Today</a>
+    <a href={`${base}#contact`}>Contact</a>
+  </nav>
+  <p class="clock">
+    Lyon <time data-clock>CET</time>
+  </p>
+</header>
+
+<style>
+  .top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding-block: clamp(1.25rem, 0.8rem + 1.4vw, 2rem);
+    font-size: var(--fs-small);
+    font-weight: 450;
+  }
+
+  .mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    justify-self: start;
+    letter-spacing: -0.01em;
+  }
+
+  .dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff, var(--accent) 70%);
+    box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent) 60%, transparent);
+    transition: background 0.6s var(--ease-out);
+  }
+
+  nav {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.28);
+    border: 1px solid rgb(255 255 255 / 0.55);
+  }
+
+  nav a {
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    color: var(--ink-2);
+    transition:
+      background-color 0.5s var(--ease-out),
+      color 0.5s var(--ease-out);
+  }
+
+  nav a:hover {
+    background: rgb(255 255 255 / 0.7);
+    color: var(--ink);
+  }
+
+  .clock {
+    justify-self: end;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .clock time {
+    color: var(--ink);
+    margin-left: 0.35rem;
+  }
+
+  @media (max-width: 40rem) {
+    .top {
+      grid-template-columns: 1fr auto;
+    }
+
+    nav {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  const el = document.querySelector<HTMLElement>("[data-clock]")
+  if (el) {
+    const fmt = new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Paris",
+    })
+    const tick = () => (el.textContent = fmt.format(new Date()))
+    tick()
+    setInterval(tick, 10000)
+  }
+</script>

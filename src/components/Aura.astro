@@ -1,0 +1,346 @@
+---
+import { tint } from "./aura"
+
+interface Props {
+  accent?: string
+  seed?: number
+}
+
+const { accent, seed = 32 } = Astro.props
+const palette = tint(accent)
+---
+
+<div
+  class="aura"
+  aria-hidden="true"
+  data-palette={palette.join(",")}
+  data-seed={seed}
+  style={palette.map((c, i) => `--a${i}:${c}`).join(";")}
+>
+  <canvas></canvas>
+</div>
+
+<style>
+  .aura {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100lvh;
+    pointer-events: none;
+    background:
+      radial-gradient(38% 46% at 16% 22%, var(--a0), transparent 70%),
+      radial-gradient(34% 42% at 88% 30%, var(--a1), transparent 70%),
+      radial-gradient(42% 48% at 62% 86%, var(--a2), transparent 72%),
+      radial-gradient(30% 36% at 8% 92%, var(--a3), transparent 70%), var(--bg);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1.8s var(--ease-soft);
+  }
+
+  .aura[data-live] canvas {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  import { BASE, BG, tint, toRgb } from "./aura"
+
+  const VERTEX = `#version 300 es
+in vec2 position;
+out vec2 v_uv;
+void main() { v_uv = position * 0.5 + 0.5; gl_Position = vec4(position, 0.0, 1.0); }`
+
+  const FRAGMENT = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+out vec4 fragColor;
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_pointer;
+uniform float u_seed;
+uniform float u_strength;
+uniform vec3 u_bg;
+uniform vec3 u_color0;
+uniform vec3 u_color1;
+uniform vec3 u_color2;
+uniform vec3 u_color3;
+
+const float WAVE_FX = 0.9;
+const float WAVE_FY = 6.0;
+const float WAVE_ANGLE = 105.0;
+const float WAVE_AMP = 2.1;
+const float MASK_SOFT = 0.74;
+const float BLEND = 0.54;
+
+mat2 Rot(float a) {
+  float s = sin(a), c = cos(a);
+  return mat2(c, -s, s, c);
+}
+
+vec2 hash(vec2 p) {
+  float s = u_seed;
+  vec2 k1 = vec2(2127.1 + s * 13.37, 81.17 + s * 7.31);
+  vec2 k2 = vec2(1269.5 + s * 11.13, 283.37 + s * 5.79);
+  p = vec2(dot(p, k1), dot(p, k2));
+  return fract(sin(p) * (43758.5453 + s * 1.618));
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float n = mix(
+    mix(dot(-1.0 + 2.0 * hash(i), f),
+        dot(-1.0 + 2.0 * hash(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)), u.x),
+    mix(dot(-1.0 + 2.0 * hash(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)),
+        dot(-1.0 + 2.0 * hash(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x),
+    u.y);
+  return 0.5 + 0.5 * n;
+}
+
+float seedF(float base) {
+  return base * (1.0 + 0.5 * sin(u_seed * 3.17 + base));
+}
+
+vec2 warpUV(vec2 uv, float t) {
+  mat2 dirRot = Rot(radians(WAVE_ANGLE + sin(u_seed * 2.73) * 30.0));
+  vec2 ruv = dirRot * uv;
+  float fx = seedF(WAVE_FX);
+  float fy = seedF(WAVE_FY);
+  float phaseX = fract(sin(u_seed * 7.19) * 437.58) * 6.2832;
+  float phaseY = fract(cos(u_seed * 3.41) * 291.37) * 6.2832;
+  float harmonic = sin(u_seed * 1.23) * 0.5;
+  float a = fy * ruv.y - sin(ruv.x * fx + ruv.y - t + phaseX);
+  a += harmonic * sin(ruv.x * fx * 2.0 + ruv.y * 0.5 + t * 0.7 + phaseY);
+  a = smoothstep(cos(a) * MASK_SOFT, sin(a) * MASK_SOFT + 3.0,
+                 cos(a - fy * ruv.y) - sin(a - fx * ruv.x));
+  a *= WAVE_AMP;
+  return cos(a) * uv + sin(a) * vec2(-uv.y, uv.x);
+}
+
+vec3 caddis(vec2 fragCoord, float t) {
+  vec2 uv = fragCoord / u_resolution;
+  float ratio = u_resolution.x / u_resolution.y;
+  vec2 tuv = uv - 0.5;
+  vec2 seedShift = vec2(sin(u_seed * 4.37), cos(u_seed * 5.91)) * 100.0;
+  float degree = noise(vec2(t * 0.1, tuv.x * tuv.y) + seedShift);
+  tuv.y *= 1.0 / ratio;
+  tuv *= Rot(radians((degree - 0.5) * 720.0 + 180.0));
+  tuv.y *= ratio;
+  vec2 uv2 = (fragCoord * 2.0 - u_resolution) / (u_resolution.x + u_resolution.y) * 2.0;
+  uv2 *= Rot(fract(sin(u_seed * 5.63) * 173.29) * 6.2832);
+  vec2 warped = warpUV(uv2, t) * 0.5 + 0.5;
+  vec2 b = mix(tuv, warped - 0.5, BLEND);
+  float r1 = -5.0 + sin(u_seed * 1.83) * 20.0;
+  float r2 = 10.0 + cos(u_seed * 2.47) * 20.0;
+  vec3 l1 = mix(u_color0, u_color2, smoothstep(-0.3, 0.3, (b * Rot(radians(r1))).x));
+  vec3 l2 = mix(u_color3, u_color1, smoothstep(-0.3, 0.3, (b * Rot(radians(r2))).x));
+  vec3 col = mix(l1, l2, smoothstep(0.3, -0.3, b.y));
+  return mix(col, col * col + 0.5 * sqrt(col), 0.3);
+}
+
+float blob(vec2 p, vec2 c, float r) {
+  vec2 d = p - c;
+  return exp(-dot(d, d) / (r * r));
+}
+
+float grain(vec2 p) {
+  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void main() {
+  vec2 fragCoord = v_uv * u_resolution;
+  float t = u_time;
+  vec3 col = caddis(fragCoord, t * 0.22);
+
+  float ratio = u_resolution.x / u_resolution.y;
+  vec2 aspect = vec2(ratio, 1.0);
+  float s = mix(0.7, 1.0, clamp(ratio, 0.0, 1.0));
+  vec2 p = (v_uv - 0.5) * aspect;
+  p += (vec2(noise(p * 1.3 + t * 0.03), noise(p * 1.3 - t * 0.025 + 17.0)) - 0.5) * 0.55;
+
+  float f = 0.0;
+  f += blob(p, (vec2(0.14 + 0.07 * sin(t * 0.071), 0.80 + 0.05 * cos(t * 0.053)) - 0.5) * aspect, 0.29 * s);
+  f += blob(p, (vec2(0.90 + 0.05 * cos(t * 0.061), 0.66 + 0.08 * sin(t * 0.083)) - 0.5) * aspect, 0.26 * s);
+  f += blob(p, (vec2(0.58 + 0.09 * sin(t * 0.047), 0.10 + 0.05 * cos(t * 0.067)) - 0.5) * aspect, 0.33 * s);
+  f += blob(p, (vec2(0.05 + 0.05 * cos(t * 0.059), 0.16 + 0.06 * sin(t * 0.041)) - 0.5) * aspect, 0.21 * s);
+  f += blob(p, (u_pointer - 0.5) * aspect, 0.24 * s);
+
+  float mask = smoothstep(0.06, 0.95, f);
+  vec3 outc = mix(u_bg, col, mask * u_strength);
+  outc += (grain(gl_FragCoord.xy + fract(t) * 91.7) - 0.5) * (3.0 / 255.0);
+  fragColor = vec4(outc, 1.0);
+}`
+
+  type Vec3 = [number, number, number]
+
+  const unit = (hex: string) => toRgb(hex).map((v) => v / 255) as Vec3
+
+  const root = document.querySelector<HTMLElement>(".aura")
+  const canvas = root?.querySelector("canvas")
+  const gl = canvas?.getContext("webgl2", {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    powerPreference: "low-power",
+  })
+
+  const compile = (gl: WebGL2RenderingContext, type: number, src: string) => {
+    const shader = gl.createShader(type)!
+    gl.shaderSource(shader, src)
+    gl.compileShader(shader)
+    return shader
+  }
+
+  if (root && canvas && gl) {
+    const program = gl.createProgram()!
+    gl.attachShader(program, compile(gl, gl.VERTEX_SHADER, VERTEX))
+    gl.attachShader(program, compile(gl, gl.FRAGMENT_SHADER, FRAGMENT))
+    gl.linkProgram(program)
+
+    if (gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      gl.useProgram(program)
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 3, -1, -1, 3]),
+        gl.STATIC_DRAW
+      )
+      const position = gl.getAttribLocation(program, "position")
+      gl.enableVertexAttribArray(position)
+      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0)
+
+      const loc = (name: string) => gl.getUniformLocation(program, name)
+      const uTime = loc("u_time")
+      const uRes = loc("u_resolution")
+      const uPointer = loc("u_pointer")
+      const uColors = [0, 1, 2, 3].map((i) => loc(`u_color${i}`))
+      const uStrength = loc("u_strength")
+
+      gl.uniform1f(loc("u_seed"), Number(root.dataset.seed) || 32)
+      gl.uniform3fv(loc("u_bg"), unit(BG))
+
+      const home = (root.dataset.palette?.split(",") ?? BASE).map(unit)
+      const homeStrength = 0.82
+      let target = home
+      const colors = home.map((c) => [...c] as Vec3)
+      let strength = homeStrength
+      let targetStrength = homeStrength
+
+      const rest: [number, number] = [0.72, 0.58]
+      const pointer: [number, number] = [...rest]
+      const aim: [number, number] = [...rest]
+
+      const SCALE = 0.5
+      const resize = () => {
+        const { width, height } = canvas.getBoundingClientRect()
+        canvas.width = Math.max(1, Math.round(width * SCALE))
+        canvas.height = Math.max(1, Math.round(height * SCALE))
+        gl.viewport(0, 0, canvas.width, canvas.height)
+        gl.uniform2f(uRes, canvas.width, canvas.height)
+      }
+
+      const offset = Math.random() * 400
+      const draw = (now: number) => {
+        colors.forEach((c, i) => gl.uniform3fv(uColors[i], c))
+        gl.uniform1f(uStrength, strength)
+        gl.uniform2f(uPointer, pointer[0], pointer[1])
+        gl.uniform1f(uTime, offset + now / 1000)
+        gl.drawArrays(gl.TRIANGLES, 0, 3)
+      }
+
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)")
+      const clock = () => (reduced.matches ? 0 : performance.now())
+
+      let active: string | null = null
+      const setAccent = (accent: string | null | undefined) => {
+        if ((accent ?? null) === active) return
+        active = accent ?? null
+        target = accent ? tint(accent).map(unit) : home
+        targetStrength = accent ? 0.92 : homeStrength
+        if (reduced.matches) {
+          target.forEach((c, i) => (colors[i] = [...c]))
+          strength = targetStrength
+          draw(0)
+        }
+      }
+
+      const accentOf = (node: EventTarget | null) =>
+        node instanceof Element
+          ? node.closest<HTMLElement>("[data-accent]")?.dataset.accent
+          : undefined
+
+      document.addEventListener("pointerover", (e) =>
+        setAccent(accentOf(e.target))
+      )
+      document.addEventListener("focusin", (e) => setAccent(accentOf(e.target)))
+      document.addEventListener("focusout", (e) =>
+        setAccent(accentOf(e.relatedTarget))
+      )
+      document.addEventListener("pointerout", (e) => {
+        if (e.relatedTarget) return
+        setAccent(null)
+        aim[0] = rest[0]
+        aim[1] = rest[1]
+      })
+
+      window.addEventListener("pointermove", (e) => {
+        if (e.pointerType === "touch") return
+        aim[0] = e.clientX / window.innerWidth
+        aim[1] = 1 - e.clientY / window.innerHeight
+      })
+
+      let raf = 0
+      let last = 0
+      const ease = (k: number, dt: number) => 1 - Math.exp(-k * dt)
+      const frame = (now: number) => {
+        const dt = Math.min((now - (last || now)) / 1000, 0.1)
+        last = now
+        const kc = ease(1.8, dt)
+        colors.forEach((c, i) =>
+          c.forEach((v, j) => (c[j] = v + (target[i][j] - v) * kc))
+        )
+        strength += (targetStrength - strength) * kc
+        const kp = ease(0.9, dt)
+        pointer[0] += (aim[0] - pointer[0]) * kp
+        pointer[1] += (aim[1] - pointer[1]) * kp
+        draw(now)
+        raf = requestAnimationFrame(frame)
+      }
+
+      const start = () => {
+        if (raf || reduced.matches || document.hidden) return
+        last = 0
+        raf = requestAnimationFrame(frame)
+      }
+      const stop = () => {
+        cancelAnimationFrame(raf)
+        raf = 0
+      }
+
+      new ResizeObserver(() => {
+        resize()
+        draw(clock())
+      }).observe(canvas)
+      resize()
+      draw(clock())
+      root.dataset.live = ""
+
+      document.addEventListener("visibilitychange", () =>
+        document.hidden ? stop() : start()
+      )
+      reduced.addEventListener("change", () =>
+        reduced.matches ? stop() : start()
+      )
+      start()
+    }
+  }
+</script>

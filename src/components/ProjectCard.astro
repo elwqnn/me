@@ -1,0 +1,219 @@
+---
+import Arrow from "./Arrow.astro"
+import NewMark from "./NewMark.astro"
+import Placeholder from "./Placeholder.astro"
+
+interface Props {
+  slug: string
+  title: string
+  description: string
+  tags: string[]
+  cover?: string
+  accent?: string
+  year: string
+  isNew: boolean
+  index: number
+  class?: string
+}
+
+const {
+  slug,
+  title,
+  description,
+  tags,
+  cover,
+  accent,
+  year,
+  isNew,
+  index,
+  class: className,
+} = Astro.props
+---
+
+<a
+  href={`/projects/${slug}`}
+  class:list={["card glass scroll-rise", className]}
+  data-accent={accent}
+  style={accent ? `--accent:${accent}` : undefined}
+>
+  <div class="media">
+    {
+      cover ? (
+        <img
+          src={cover}
+          alt={`${title} cover`}
+          loading={index < 2 ? "eager" : "lazy"}
+          decoding="async"
+        />
+      ) : (
+        <Placeholder title={title} accent={accent} class="fill" />
+      )
+    }
+    {isNew && <NewMark class="flag" />}
+    <span class="go glass" aria-hidden="true"><Arrow angle={-45} /></span>
+  </div>
+  <div class="body">
+    <span class="idx">{String(index + 1).padStart(2, "0")}</span>
+    <h3>{title}</h3>
+    <span class="year">{year}</span>
+    <p class="desc">{description}</p>
+    <ul role="list" class="tags">
+      {tags.map((tag) => <li>{tag}</li>)}
+    </ul>
+  </div>
+</a>
+
+<style>
+  .card {
+    --pad: 10px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: var(--pad);
+    border-radius: var(--radius-lg);
+    transition:
+      transform 0.9s var(--ease-out),
+      box-shadow 0.9s var(--ease-out),
+      background-color 0.9s var(--ease-out);
+  }
+
+  .card:hover,
+  .card:focus-visible {
+    transform: translateY(-6px);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.85),
+      0 1px 2px rgb(44 32 92 / 0.05),
+      0 40px 80px -36px rgb(52 36 112 / 0.38);
+  }
+
+  .card:focus-visible {
+    outline-offset: 6px;
+    outline-color: var(--ink);
+  }
+
+  .media {
+    position: relative;
+    height: clamp(15rem, 8rem + 18vw, 28rem);
+    overflow: hidden;
+    border-radius: calc(var(--radius-lg) - var(--pad));
+    background: rgb(255 255 255 / 0.3);
+    isolation: isolate;
+  }
+
+  .media img,
+  .media :global(.fill) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition:
+      scale 1.4s var(--ease-out),
+      filter 1.4s var(--ease-out);
+  }
+
+  .card:hover .media img,
+  .card:hover .media :global(.fill),
+  .card:focus-visible .media img {
+    scale: 1.04;
+  }
+
+  .media :global(.flag) {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 1;
+  }
+
+  .go {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    color: var(--ink);
+    opacity: 0;
+    transform: translate(-6px, 6px) scale(0.9);
+    transition:
+      opacity 0.6s var(--ease-out),
+      transform 0.8s var(--ease-out);
+  }
+
+  .card:hover .go,
+  .card:focus-visible .go {
+    opacity: 1;
+    transform: none;
+  }
+
+  .body {
+    display: grid;
+    grid-template-columns: 2.4rem 1fr auto;
+    align-items: baseline;
+    row-gap: 0.55rem;
+    padding: 1.15rem 0.85rem 0.8rem;
+  }
+
+  .idx,
+  .year {
+    font-size: var(--fs-micro);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+  }
+
+  h3 {
+    font-size: clamp(1.375rem, 1.1rem + 0.6vw, 1.75rem);
+    font-weight: 380;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
+
+  .desc,
+  .tags {
+    grid-column: 2 / -1;
+  }
+
+  .desc {
+    max-width: 44ch;
+    color: var(--ink-2);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+  }
+
+  .tags li {
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgb(31 28 40 / 0.1);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--ink-2);
+  }
+
+  @media (max-width: 40rem) {
+    .media {
+      height: auto;
+      aspect-ratio: 4 / 3;
+    }
+
+    .body {
+      grid-template-columns: 2rem 1fr auto;
+    }
+
+    .go {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

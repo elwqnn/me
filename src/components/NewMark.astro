@@ -1,0 +1,60 @@
+---
+interface Props {
+  class?: string
+}
+
+const { class: className } = Astro.props
+---
+
+<span class:list={["new glass", className]}>
+  <span class="orb" aria-hidden="true"></span>New
+</span>
+
+<style>
+  .new {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 1.75rem;
+    padding: 0 0.75rem 0 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 560;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .orb {
+    position: relative;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      #b79cff,
+      #ff9ec4,
+      #ffc48a,
+      #8fc2ff,
+      #b79cff
+    );
+    animation: spin 4s linear infinite;
+  }
+
+  .orb::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    background: inherit;
+    filter: blur(5px);
+    opacity: 0.8;
+    z-index: -1;
+  }
+
+  @keyframes spin {
+    to {
+      rotate: 1turn;
+    }
+  }
+</style>

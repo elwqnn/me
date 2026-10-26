@@ -1,0 +1,25 @@
+---
+interface Props {
+  angle?: number
+  size?: number
+  class?: string
+}
+
+const { angle = 0, size = 14, class: className } = Astro.props
+---
+
+<svg
+  class:list={["arrow", className]}
+  width={size}
+  height={size}
+  viewBox="0 0 16 16"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.3"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  style={`rotate:${angle}deg`}
+>
+  <path d="M2.5 8h11M9 3.5 13.5 8 9 12.5"></path>
+</svg>

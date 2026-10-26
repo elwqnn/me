@@ -1,131 +1,512 @@
 ---
 import { getCollection, render } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ImageHero, ImageGrid } from "@/components/ImageGallery"
-import { ArrowLeft, ExternalLink, Github } from "@/components/icons"
+import SiteHeader from "@/components/SiteHeader.astro"
+import Arrow from "@/components/Arrow.astro"
+import NewMark from "@/components/NewMark.astro"
+import Placeholder from "@/components/Placeholder.astro"
+import Lightbox from "@/components/Lightbox.astro"
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects")
-  return projects.map((project) => ({
+  const projects = (await getCollection("projects")).sort(
+    (a, b) => a.data.order - b.data.order
+  )
+  return projects.map((project, index) => ({
     params: { slug: project.id },
-    props: { project },
+    props: {
+      project,
+      index,
+      total: projects.length,
+      next: projects[(index + 1) % projects.length],
+    },
   }))
 }
 
-const { project } = Astro.props
+const { project, index, total, next } = Astro.props
 const { Content } = await render(project)
-const { title, description, tags, images, links, githubUrl, liveUrl, year } =
-  project.data
+const {
+  title,
+  description,
+  tags,
+  images,
+  links,
+  githubUrl,
+  liveUrl,
+  year,
+  accentColor,
+  isNew,
+} = project.data
+
+const gallery = images.map((src) => ({
+  src: src.split("#")[0],
+  wide: src.endsWith("#wide"),
+}))
+const hasBody = Boolean(project.body?.trim())
+const outbound = [
+  ...links,
+  ...(liveUrl ? [{ label: "Live Preview", url: liveUrl }] : []),
+  ...(githubUrl ? [{ label: "Source Code", url: githubUrl }] : []),
+]
+const pad = (n: number) => String(n).padStart(2, "0")
 ---
 
 <Layout
   title={`${title} — Elwann Guillemot`}
   description={description}
-  image={images[0]}
+  image={gallery[0]?.src}
+  accent={accentColor}
+  seed={32 + index * 7}
 >
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <a
-          href="/#projects"
-          class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
+  <SiteHeader />
+
+  <main class="wrap">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/#work" class="back">
+        <Arrow angle={180} size={13} />
+        All work
+      </a>
+      <span class="count">{pad(index + 1)} / {pad(total)}</span>
+    </nav>
+
+    <header class="intro">
+      <div class="kicker reveal" style="--i:0">
+        <span class="label"><span class="num">{year}</span>Project</span>
+        {isNew && <NewMark />}
+      </div>
+      <h1 class="title reveal" style="--i:1">{title}</h1>
+      <p class="lead reveal" style="--i:2">{description}</p>
+    </header>
+
+    {
+      gallery.length > 0 ? (
+        <button
+          class="hero glass reveal"
+          style="--i:3"
+          data-open="0"
+          aria-label={`Open ${title}, image 1, full size`}
         >
-          <ArrowLeft
-            size={14}
-            className="transition-transform duration-200 group-hover:-translate-x-0.5"
+          <img
+            src={gallery[0].src}
+            alt={`${title}, image 1`}
+            decoding="async"
+            fetchpriority="high"
           />
-          Back to projects
-        </a>
-        <ThemeToggle client:load />
-      </header>
-
-      <header class="mb-12">
-        <h1 class="mb-3 text-3xl font-bold">{title}</h1>
-        <p class="mb-6 text-lg text-muted-foreground">{description}</p>
-        <p class="text-xs text-muted-foreground/40">
-          {tags.join(" · ")}
-        </p>
-      </header>
-
-      <div class="mb-12">
-        <ImageHero images={images} title={title} client:load />
-      </div>
-
-      <div class="mb-12 grid gap-12 md:grid-cols-3">
-        <div class="col-span-2">
-          <h2 class="mb-4 text-xl font-semibold">About the project</h2>
-          <div
-            class="space-y-4 text-muted-foreground [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors [&_a:hover]:text-primary"
-          >
-            <Content />
-          </div>
+        </button>
+      ) : (
+        <div class="hero glass solo reveal" style="--i:3">
+          <Placeholder title={title} accent={accentColor} class="art" />
         </div>
+      )
+    }
 
-        <div class="space-y-6">
-          <div>
-            <h3
-              class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase"
-            >
-              Year
-            </h3>
-            <p class="text-sm">{year}</p>
-          </div>
-
-          {
-            (links.length > 0 || liveUrl || githubUrl) && (
-              <div>
-                <h3 class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  Links
-                </h3>
-                <div class="space-y-2">
-                  {links.map(({ label, url }) => (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      {label}
-                    </a>
-                  ))}
-                  {liveUrl && (
-                    <a
-                      href={liveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      Live Preview
-                    </a>
-                  )}
-                  {githubUrl && (
-                    <a
-                      href={githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <Github size={14} />
-                      Source Code
-                    </a>
-                  )}
-                </div>
-              </div>
-            )
-          }
-        </div>
-      </div>
-
+    <div class:list={["body", { only: !hasBody }]}>
       {
-        images.length > 1 && (
-          <div class="mb-12">
-            <ImageGrid images={images} title={title} client:load />
-          </div>
+        hasBody && (
+          <article class="prose">
+            <p class="label">About the project</p>
+            <div class="md">
+              <Content />
+            </div>
+          </article>
         )
       }
+      <aside class="facts glass" aria-label="Project details">
+        <dl>
+          <div>
+            <dt class="label">Year</dt>
+            <dd class="year">{year}</dd>
+          </div>
+          <div>
+            <dt class="label">Stack</dt>
+            <dd>
+              <ul role="list" class="tags">
+                {tags.map((tag) => <li>{tag}</li>)}
+              </ul>
+            </dd>
+          </div>
+        </dl>
+        {
+          outbound.length > 0 && (
+            <div class="links">
+              <p class="label">Links</p>
+              <ul role="list">
+                {outbound.map(({ label, url }) => (
+                  <li>
+                    <a href={url} target="_blank" rel="noopener noreferrer">
+                      <span>{label}</span>
+                      <Arrow angle={-45} size={13} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+      </aside>
     </div>
-  </div>
+
+    {
+      gallery.length > 1 && (
+        <section class="gallery" aria-labelledby="gallery-title">
+          <p id="gallery-title" class="label">
+            <span class="num">{pad(gallery.length - 1)}</span>More images
+          </p>
+          <div class="cols">
+            {gallery.slice(1).map(({ src, wide }, i) => (
+              <button
+                class:list={["shot glass scroll-rise", { wide }]}
+                data-open={i + 1}
+                aria-label={`Open ${title}, image ${i + 2}, full size`}
+              >
+                <img
+                  src={src}
+                  alt={`${title}, image ${i + 2}`}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </button>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    <a
+      class="next"
+      href={`/projects/${next.id}`}
+      data-accent={next.data.accentColor}
+      style={next.data.accentColor
+        ? `--next:${next.data.accentColor}`
+        : undefined}
+    >
+      <span class="label">Next project</span>
+      <span class="next-title">
+        {next.data.title}
+        <Arrow size={40} class="next-arrow" />
+      </span>
+      <span class="next-desc">{next.data.description}</span>
+    </a>
+  </main>
+
+  {
+    gallery.length > 0 && (
+      <Lightbox images={gallery.map(({ src }) => src)} title={title} />
+    )
+  }
 </Layout>
+
+<style>
+  .crumbs {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: clamp(1.5rem, 4vw, 3.5rem);
+    font-size: var(--fs-small);
+  }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ink-2);
+    transition: color 0.4s var(--ease-out);
+  }
+
+  .back :global(.arrow) {
+    transition: translate 0.6s var(--ease-out);
+  }
+
+  .back:hover {
+    color: var(--ink);
+  }
+
+  .back:hover :global(.arrow) {
+    translate: -3px 0;
+  }
+
+  .count {
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .intro {
+    display: grid;
+    gap: clamp(1.25rem, 2.5vw, 2rem);
+    padding-block: clamp(4rem, 10vw, 9rem) clamp(3rem, 6vw, 5rem);
+  }
+
+  .kicker {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .title {
+    font-size: var(--fs-title);
+    font-weight: 190;
+    letter-spacing: -0.055em;
+    line-height: 0.9;
+    text-wrap: balance;
+  }
+
+  .lead {
+    max-width: 28ch;
+    font-size: var(--fs-statement);
+    font-weight: 290;
+    letter-spacing: -0.022em;
+    line-height: 1.22;
+    color: var(--ink-2);
+    text-wrap: balance;
+  }
+
+  .hero {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+    padding: 10px;
+    border-radius: var(--radius-lg);
+    cursor: zoom-in;
+    transition: transform 0.9s var(--ease-out);
+  }
+
+  .hero img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: min(78vh, 56rem);
+    border-radius: calc(var(--radius-lg) - 10px);
+  }
+
+  .hero:hover {
+    transform: translateY(-4px);
+  }
+
+  .hero.solo {
+    width: 100%;
+    cursor: default;
+  }
+
+  .hero.solo:hover {
+    transform: none;
+  }
+
+  .hero :global(.art) {
+    aspect-ratio: 21 / 9;
+    border-radius: calc(var(--radius-lg) - 10px);
+  }
+
+  .body {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 1.25rem;
+    row-gap: 3rem;
+    padding-top: clamp(4rem, 8vw, 7rem);
+  }
+
+  .prose {
+    grid-column: 1 / 8;
+    display: grid;
+    align-content: start;
+    gap: 1.5rem;
+  }
+
+  .md {
+    max-width: 38em;
+    font-size: clamp(1.125rem, 1rem + 0.4vw, 1.35rem);
+    font-weight: 330;
+    line-height: 1.6;
+    letter-spacing: -0.008em;
+    color: var(--ink-2);
+  }
+
+  .md :global(p + p) {
+    margin-top: 1.1em;
+  }
+
+  .md :global(a) {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+    text-decoration-color: color-mix(in srgb, var(--ink) 35%, transparent);
+    transition: text-decoration-color 0.4s var(--ease-out);
+  }
+
+  .md :global(a:hover) {
+    text-decoration-color: var(--ink);
+  }
+
+  .facts {
+    grid-column: 9 / -1;
+    align-self: start;
+    position: sticky;
+    top: 1.5rem;
+    display: grid;
+    gap: 1.75rem;
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+  }
+
+  .only .facts {
+    grid-column: 1 / -1;
+    position: static;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  dl {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  dd {
+    margin: 0.5rem 0 0;
+  }
+
+  .year {
+    font-size: 1.5rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .tags li {
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgb(31 28 40 / 0.12);
+    background: rgb(255 255 255 / 0.35);
+    font-size: 0.8125rem;
+    color: var(--ink);
+  }
+
+  .links ul {
+    display: grid;
+    margin-top: 0.4rem;
+  }
+
+  .links a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 1rem;
+    transition:
+      padding 0.6s var(--ease-out),
+      color 0.4s var(--ease-out);
+  }
+
+  .links li:last-child a {
+    border-bottom: 0;
+  }
+
+  .links a:hover {
+    padding-left: 0.35rem;
+  }
+
+  .gallery {
+    display: grid;
+    gap: 1.5rem;
+    padding-top: var(--section);
+  }
+
+  .cols {
+    columns: 2;
+    column-gap: clamp(0.75rem, 0.4rem + 1vw, 1.25rem);
+  }
+
+  .shot {
+    display: block;
+    width: 100%;
+    margin-bottom: clamp(0.75rem, 0.4rem + 1vw, 1.25rem);
+    padding: 8px;
+    border-radius: var(--radius-md);
+    break-inside: avoid;
+    cursor: zoom-in;
+    transition: transform 0.9s var(--ease-out);
+  }
+
+  .shot.wide {
+    column-span: all;
+  }
+
+  .shot img {
+    width: 100%;
+    height: auto;
+    border-radius: calc(var(--radius-md) - 8px);
+  }
+
+  .shot:hover {
+    transform: translateY(-4px);
+  }
+
+  .next {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: var(--section);
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .next-title {
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+    font-size: clamp(2.5rem, 1rem + 5vw, 5.5rem);
+    font-weight: 200;
+    letter-spacing: -0.05em;
+    line-height: 1;
+  }
+
+  .next-title :global(.next-arrow) {
+    flex: none;
+    width: 0.5em;
+    height: 0.5em;
+    opacity: 0.5;
+    transition:
+      translate 0.9s var(--ease-out),
+      opacity 0.6s var(--ease-out);
+  }
+
+  .next:hover :global(.next-arrow),
+  .next:focus-visible :global(.next-arrow) {
+    translate: 0.2em 0;
+    opacity: 1;
+  }
+
+  .next-desc {
+    color: var(--ink-2);
+  }
+
+  @media (max-width: 60rem) {
+    .prose,
+    .facts {
+      grid-column: 1 / -1;
+    }
+
+    .facts {
+      position: static;
+    }
+  }
+
+  @media (max-width: 40rem) {
+    .cols {
+      columns: 1;
+    }
+
+    .hero :global(.art) {
+      aspect-ratio: 4 / 3;
+    }
+
+    .only .facts {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,16 +1,22 @@
 ---
 import "@/styles/global.css"
+import Aura from "@/components/Aura.astro"
+import NowPill from "@/components/NowPill.astro"
 
 interface Props {
   title?: string
   description?: string
   image?: string
+  accent?: string
+  seed?: number
 }
 
 const {
   title = "Elwann Guillemot",
   description = "Back-end developer focused on performance and user experience. Currently studying abroad at Hanze University in Groningen.",
   image,
+  accent,
+  seed,
 } = Astro.props
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
@@ -19,7 +25,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#e3e1ea" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href={canonicalURL} />
@@ -59,20 +66,20 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
         ],
       })}
     />
-
-    <script is:inline>
-      const theme = localStorage.getItem("theme") ?? "system"
-      const isDark =
-        theme === "dark" ||
-        (theme === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      if (isDark) document.documentElement.classList.add("dark")
-    </script>
   </head>
-  <body>
-    <div class="relative isolate min-h-screen">
+  <body style={accent ? `--accent:${accent}` : undefined}>
+    <Aura accent={accent} seed={seed} />
+    <div class="page">
       <slot />
-      <div class="noise-overlay" aria-hidden="true"></div>
     </div>
+    <NowPill />
   </body>
 </html>
+
+<style>
+  .page {
+    position: relative;
+    z-index: 1;
+    padding-bottom: 7rem;
+  }
+</style>
