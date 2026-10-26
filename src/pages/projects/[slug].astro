@@ -1,131 +1,349 @@
 ---
-import { getCollection, render } from "astro:content"
+import { render } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ImageHero, ImageGrid } from "@/components/ImageGallery"
-import { ArrowLeft, ExternalLink, Github } from "@/components/icons"
+import Wall, { type Tile } from "@/components/Wall.astro"
+import Lightbox from "@/components/Lightbox.astro"
+import {
+  getProjects,
+  host,
+  pad,
+  projectLinks,
+  shots,
+  type Project,
+} from "@/lib/projects"
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects")
-  return projects.map((project) => ({
+  const projects = await getProjects()
+  return projects.map((project, i) => ({
     params: { slug: project.id },
-    props: { project },
+    props: {
+      project,
+      index: i,
+      total: projects.length,
+      prev: projects[(i - 1 + projects.length) % projects.length],
+      next: projects[(i + 1) % projects.length],
+    },
   }))
 }
 
-const { project } = Astro.props
+interface Props {
+  project: Project
+  index: number
+  total: number
+  prev: Project
+  next: Project
+}
+
+const { project, index, total, prev, next } = Astro.props
 const { Content } = await render(project)
-const { title, description, tags, images, links, githubUrl, liveUrl, year } =
-  project.data
+const { title, description, tags, images, year, isNew } = project.data
+const accent = project.data.accentColor ?? "#efede6"
+const links = projectLinks(project)
+const list = await shots(project)
+
+const base = { slug: project.id, title, accent }
+const tiles: Tile[] = list.length
+  ? list.map((shot, i) => ({
+      ...base,
+      href: shot.src,
+      shot,
+      alt: `${title}, ${shot.kind.toLowerCase()} (${i + 1} of ${list.length})`,
+      lead: shot.kind,
+      rest: `${shot.width} × ${shot.height} ${shot.src.split(".").pop()?.toUpperCase()}`,
+      wide: shot.wide || list.length === 1,
+      zoom: i,
+    }))
+  : [
+      {
+        ...base,
+        alt: `${title}, generated diagram`,
+        lead: "Fig. 01",
+        rest: "— Fan-out through the subject tree",
+        note: tags.join(" · "),
+        wide: true,
+      },
+    ]
+
+const external = { target: "_blank", rel: "noopener noreferrer" }
 ---
 
 <Layout
   title={`${title} — Elwann Guillemot`}
   description={description}
-  image={images[0]}
+  image={images[0]?.replace(/#wide$/, "")}
 >
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <a
-          href="/#projects"
-          class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-        >
-          <ArrowLeft
-            size={14}
-            className="transition-transform duration-200 group-hover:-translate-x-0.5"
-          />
-          Back to projects
-        </a>
-        <ThemeToggle client:load />
-      </header>
-
-      <header class="mb-12">
-        <h1 class="mb-3 text-3xl font-bold">{title}</h1>
-        <p class="mb-6 text-lg text-muted-foreground">{description}</p>
-        <p class="text-xs text-muted-foreground/40">
-          {tags.join(" · ")}
+  <div class="shell" style={`--accent: ${accent}`}>
+    <aside class="side">
+      <div class="side-head">
+        <p class="crumbs label">
+          <a href="/#work" class="back"
+            ><span class="arrow" aria-hidden="true">←</span> Index</a
+          >
+          <span>{pad(index + 1)} / {pad(total)}</span>
         </p>
-      </header>
-
-      <div class="mb-12">
-        <ImageHero images={images} title={title} client:load />
+        <h1 class="title" data-fit>
+          {
+            title.split(" ").map((word, i) => (
+              <>
+                {i > 0 && " "}
+                <span class="word">
+                  <span style={`--i: ${i}`}>{word}</span>
+                </span>
+              </>
+            ))
+          }
+        </h1>
+        <p class="lede">{description}</p>
+        <dl class="facts">
+          <div>
+            <dt class="label">Year</dt>
+            <dd>
+              {year}
+              {isNew && <span class="new">New</span>}
+            </dd>
+          </div>
+          <div>
+            <dt class="label">Stack</dt>
+            <dd>{tags.join(", ")}</dd>
+          </div>
+        </dl>
       </div>
 
-      <div class="mb-12 grid gap-12 md:grid-cols-3">
-        <div class="col-span-2">
-          <h2 class="mb-4 text-xl font-semibold">About the project</h2>
-          <div
-            class="space-y-4 text-muted-foreground [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors [&_a:hover]:text-primary"
-          >
-            <Content />
-          </div>
-        </div>
-
-        <div class="space-y-6">
-          <div>
-            <h3
-              class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase"
-            >
-              Year
-            </h3>
-            <p class="text-sm">{year}</p>
-          </div>
-
-          {
-            (links.length > 0 || liveUrl || githubUrl) && (
-              <div>
-                <h3 class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  Links
-                </h3>
-                <div class="space-y-2">
-                  {links.map(({ label, url }) => (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      {label}
-                    </a>
-                  ))}
-                  {liveUrl && (
-                    <a
-                      href={liveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      Live Preview
-                    </a>
-                  )}
-                  {githubUrl && (
-                    <a
-                      href={githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <Github size={14} />
-                      Source Code
-                    </a>
-                  )}
-                </div>
-              </div>
-            )
-          }
-        </div>
+      <div class="prose">
+        <Content />
       </div>
 
       {
-        images.length > 1 && (
-          <div class="mb-12">
-            <ImageGrid images={images} title={title} client:load />
-          </div>
+        links.length > 0 && (
+          <nav aria-labelledby="links-title">
+            <h2 class="label links-title" id="links-title">
+              Links
+            </h2>
+            <ul class="links">
+              {links.map(({ label, url }, i) => (
+                <li>
+                  <a class="row-link" href={url} {...external}>
+                    <span class="num">{pad(i + 1)}</span>
+                    <span>{label}</span>
+                    <span class="end">
+                      {host(url)} <span class="arrow">↗</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         )
       }
-    </div>
+
+      <nav class="pager" aria-label="More projects">
+        <a href={`/projects/${prev.id}`} rel="prev">
+          <span class="label">Previous</span>
+          <span class="pager-t">{prev.data.title}</span>
+        </a>
+        <a href={`/projects/${next.id}`} rel="next">
+          <span class="label">Next</span>
+          <span class="pager-t">{next.data.title}</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <section aria-labelledby="plates-title">
+        <header class="sec-head">
+          <h2 class="label" id="plates-title">Plates</h2>
+          <span class="label"
+            >{
+              list.length ? pad(list.length) : "No screenshots, a diagram"
+            }</span
+          >
+        </header>
+        <Wall tiles={tiles} variant="project" />
+      </section>
+    </main>
   </div>
+  {list.length > 0 && <Lightbox title={title} />}
 </Layout>
+
+<style>
+  .side-head {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .crumbs {
+    display: flex;
+    justify-content: space-between;
+    gap: 1em;
+  }
+
+  .back {
+    color: var(--fg-2);
+    transition: color 0.25s;
+  }
+
+  .back:hover {
+    color: var(--fg);
+  }
+
+  .back:hover .arrow {
+    transform: translateX(-3px);
+  }
+
+  .title {
+    margin-left: -0.05em;
+    font-size: 30cqi;
+    font-weight: 840;
+    font-stretch: 88%;
+    line-height: 0.84;
+    color: var(--fg);
+  }
+
+  .word {
+    display: block;
+    width: fit-content;
+    overflow: hidden;
+    padding: 0.1em 0.06em 0.04em 0.05em;
+    margin: -0.1em -0.06em -0.04em -0.05em;
+  }
+
+  .word > span {
+    display: inline-block;
+    letter-spacing: -0.035em;
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .word > span {
+      animation: rise 1.1s var(--ease-out) calc(var(--i) * 90ms) both;
+    }
+
+    @keyframes rise {
+      from {
+        transform: translateY(104%);
+      }
+    }
+  }
+
+  .lede {
+    max-width: 24em;
+    font-size: clamp(17px, 1.4vw, 20px);
+    line-height: 1.32;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: var(--gap);
+  }
+
+  .facts div {
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+
+  .facts dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6em;
+    margin-top: 4px;
+    color: var(--fg);
+  }
+
+  .prose {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9em;
+    max-width: 34em;
+    color: var(--fg-2);
+    line-height: 1.6;
+    text-wrap: pretty;
+  }
+
+  .prose :global(a) {
+    color: var(--fg);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    text-decoration-color: color-mix(in oklab, var(--accent) 70%, transparent);
+    transition: text-decoration-color 0.3s;
+  }
+
+  .prose :global(a:hover) {
+    text-decoration-color: var(--fg);
+  }
+
+  .links-title {
+    margin-bottom: 10px;
+  }
+
+  .links {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .links .end {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pager {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap);
+  }
+
+  .pager a {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    transition: border-color 0.3s;
+  }
+
+  .pager a[rel="next"] {
+    text-align: right;
+  }
+
+  .pager a:hover {
+    border-color: var(--fg);
+  }
+
+  .pager-t {
+    font-size: 17px;
+    font-weight: 600;
+    font-stretch: 90%;
+    color: var(--fg);
+  }
+</style>
+
+<script>
+  const title = document.querySelector<HTMLElement>("[data-fit]")
+  if (title) {
+    const words = [...title.querySelectorAll<HTMLElement>(".word > span")]
+    const widest = () => Math.max(...words.map((w) => w.offsetWidth))
+    const fit = () => {
+      title.style.fontSize = ""
+      const room = title.clientWidth
+      let lo = 62
+      let hi = 125
+      for (let i = 0; i < 8; i++) {
+        const mid = (lo + hi) / 2
+        title.style.setProperty("font-stretch", `${mid}%`)
+        if (widest() > room) hi = mid
+        else lo = mid
+      }
+      title.style.setProperty("font-stretch", `${lo}%`)
+      const size = parseFloat(getComputedStyle(title).fontSize)
+      title.style.fontSize = `${Math.min((size * room) / widest(), size * 1.2)}px`
+    }
+    fit()
+    document.fonts.ready.then(fit)
+    addEventListener("resize", fit)
+  }
+</script>

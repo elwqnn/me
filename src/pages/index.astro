@@ -1,107 +1,543 @@
 ---
-import { getCollection } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ProjectShowcase } from "@/components/ProjectShowcase"
-import { ExternalLinkIcon } from "@/components/icons"
+import Wall, { type Tile } from "@/components/Wall.astro"
+import { getProjects, pad, shots } from "@/lib/projects"
 
-const projects = (await getCollection("projects")).sort(
-  (a, b) => a.data.order - b.data.order
-)
+const projects = await getProjects()
+
+const tiles: Tile[] = []
+for (const p of projects) {
+  const { title, year, isNew, tags } = p.data
+  const base = {
+    href: `/projects/${p.id}`,
+    slug: p.id,
+    title,
+    accent: p.data.accentColor ?? "#efede6",
+    lead: title,
+  }
+  const list = await shots(p)
+  if (!list.length) {
+    tiles.push({
+      ...base,
+      alt: `${title}, generated diagram`,
+      rest: `— Diagram, ${year}`,
+      note: tags.join(" · "),
+      isNew,
+    })
+  }
+  list.forEach((shot, i) =>
+    tiles.push({
+      ...base,
+      shot,
+      alt: `${title}, ${shot.kind.toLowerCase()}`,
+      rest: `— ${shot.kind}, ${year}`,
+      wide: shot.wide,
+      quiet: i > 0,
+      isNew: isNew && i === 0,
+    })
+  )
+}
+
+const external = { target: "_blank", rel: "noopener noreferrer" }
 ---
 
 <Layout>
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <div class="flex flex-col">
-          <a
-            href="/"
-            class="text-sm font-medium transition-colors duration-200 hover:text-primary"
-          >
-            Elwann Guillemot
-          </a>
-          <span class="text-sm text-muted-foreground">Back-end Developer</span>
-        </div>
-        <ThemeToggle client:load />
-      </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="side-head">
+        <p class="meta label">
+          <span>Back-end Developer</span>
+          <span>Lyon, France</span>
+        </p>
+        <h1 class="name">
+          <span class="name-line"><span class="name-a">Elwann</span></span>
+          <span class="name-line"><span class="name-b">Guillemot</span></span>
+        </h1>
+        <p class="lede">
+          I write fast back-ends in Rust, and design the identities that go with
+          them.
+        </p>
+      </div>
 
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Today</h3>
-        <p class="text-muted-foreground">
+      <nav class="index" aria-labelledby="index-label">
+        <p class="label index-label" id="index-label">
+          <span>Index</span><span>{pad(projects.length)}</span>
+        </p>
+        <ol>
+          {
+            projects.map((p, i) => (
+              <li>
+                <a
+                  class="row-link"
+                  href={`/projects/${p.id}`}
+                  data-project={p.id}
+                  style={`--accent: ${p.data.accentColor ?? "#efede6"}`}
+                >
+                  <span class="num">{pad(i + 1)}</span>
+                  <span class="t">
+                    {p.data.title}
+                    {p.data.isNew && <span class="new">New</span>}
+                  </span>
+                  <span class="end">{p.data.year}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+        <div class="readout" aria-hidden="true">
+          {
+            projects.map((p) => (
+              <p
+                data-readout={p.id}
+                style={`--accent: ${p.data.accentColor ?? "#efede6"}`}
+              >
+                <span class="ro-desc">{p.data.description}</span>
+                <span class="ro-tags">{p.data.tags.join(" · ")}</span>
+              </p>
+            ))
+          }
+        </div>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <section id="work" class="section" aria-labelledby="work-title">
+        <header class="sec-head">
+          <h2 class="label" id="work-title">Selected work</h2>
+          <span class="label">{pad(tiles.length)} plates</span>
+        </header>
+        <Wall tiles={tiles} variant="home" />
+      </section>
+
+      <section id="about" class="section" aria-labelledby="about-title">
+        <header class="sec-head">
+          <h2 class="label" id="about-title">About</h2>
+          <span class="label">Today</span>
+        </header>
+        <p class="today">
           I spent my fourth year abroad at the <a
             href="https://www.hanze.nl/en"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Hanze University of Applied Sciences</a
+            {...external}>Hanze University of Applied Sciences</a
           > in Groningen, Netherlands. Now I'm back at <a
             href="https://www.aktislab.fr/"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Aktislab</a
+            {...external}>Aktislab</a
           > in Lyon, France, for my final year. Most of my time goes into building
-          tools that make my life, and anyone else's, a little easier and more enjoyable. Things that feel
-          fast and leave room for the <span class="text-foreground"
-            >person using them</span
+          tools that make my life, and anyone else's, a little easier and more enjoyable.
+          Things that feel fast and leave room for the <em>person using them</em
           >.
         </p>
+        <dl class="facts">
+          <div>
+            <dt class="label">Role</dt>
+            <dd>Back-end Developer</dd>
+          </div>
+          <div>
+            <dt class="label">Now</dt>
+            <dd>Aktislab, Lyon</dd>
+          </div>
+          <div>
+            <dt class="label">Before</dt>
+            <dd>Hanze UAS, Groningen</dd>
+          </div>
+          <div>
+            <dt class="label">Mostly</dt>
+            <dd>Rust</dd>
+          </div>
+        </dl>
       </section>
 
-      <section id="projects" class="py-12">
-        <h3 class="mb-6 text-lg font-medium">
-          Some of my projects <span
-            class="text-xs font-normal text-muted-foreground"
-            >(the most interesting ones imo!)</span
-          >
-        </h3>
-        <ProjectShowcase
-          projects={projects.map((p) => ({
-            slug: p.id,
-            title: p.data.title,
-            description: p.data.description,
-            tags: p.data.tags,
-            images: p.data.images,
-            accentColor: p.data.accentColor ?? "var(--primary)",
-            year: p.data.year,
-            isNew: p.data.isNew,
-          }))}
-          client:load
-        />
-      </section>
-
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Contact</h3>
-        <p class="mb-4 text-muted-foreground">
+      <section id="contact" class="section" aria-labelledby="contact-title">
+        <header class="sec-head">
+          <h2 class="label" id="contact-title">Contact</h2>
+          <span class="label">Say hello</span>
+        </header>
+        <p class="intro">
           Feel free to reach out if you're looking to collaborate on a project,
           have a job opportunity, or just want to connect.
         </p>
-        <p class="mb-4 text-muted-foreground">
-          <a
-            href="https://github.com/elwqnn"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">@elwqnn</a
+        <a class="mail" href="mailto:elwann.guillemot@epitech.eu">
+          elwann.guillemot@epitech.eu<span class="arrow" aria-hidden="true"
+            >↗</span
           >
-          on github
-        </p>
-        <p class="mb-4 text-muted-foreground">
-          email me at
-          <a
-            href="mailto:elwann.guillemot@epitech.eu"
-            class="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors duration-200 hover:text-primary"
-          >
-            elwann.guillemot@epitech.eu
-            <ExternalLinkIcon size={16} />
-          </a>
-        </p>
-        <p class="text-muted-foreground">
-          or check out my <a
-            href="/documents/elwann_guillemot_resume.pdf"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            >resume</a
-          >.
+        </a>
+        <ul class="elsewhere">
+          <li>
+            <a class="row-link" href="https://github.com/elwqnn" {...external}>
+              <span class="num">01</span>
+              <span>GitHub</span>
+              <span class="end">@elwqnn <span class="arrow">↗</span></span>
+            </a>
+          </li>
+          <li>
+            <a class="row-link" href="/documents/elwann_guillemot_resume.pdf">
+              <span class="num">02</span>
+              <span>Resume</span>
+              <span class="end">PDF <span class="arrow">↗</span></span>
+            </a>
+          </li>
+        </ul>
+        <p class="colophon label">
+          <span>© {new Date().getFullYear()} Elwann Guillemot</span>
+          <span>Set in Archivo</span>
         </p>
       </section>
-    </div>
+    </main>
   </div>
 </Layout>
+
+<style>
+  .side-head {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 1em;
+  }
+
+  .name {
+    display: flex;
+    flex-direction: column;
+    margin-left: -0.05em;
+    font-size: min(22.8cqi, 10.5vh);
+    font-weight: 860;
+    line-height: 0.82;
+    color: var(--fg);
+  }
+
+  .name-line {
+    display: block;
+    overflow: hidden;
+    padding: 0.1em 0.2em 0.04em 0.05em;
+    margin: -0.1em -0.2em -0.04em -0.05em;
+  }
+
+  .name-line > span {
+    display: inline-block;
+    letter-spacing: -0.035em;
+    white-space: nowrap;
+  }
+
+  .name-a {
+    font-stretch: 125%;
+  }
+
+  .name-b {
+    font-size: 1.4426em;
+    font-stretch: 62%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .name-a {
+      animation:
+        rise 1.1s var(--ease-out) 0.05s both,
+        widen 1.8s var(--ease-out) 0.2s both;
+    }
+
+    .name-b {
+      animation:
+        rise 1.1s var(--ease-out) 0.14s both,
+        narrow 1.8s var(--ease-out) 0.2s both;
+    }
+
+    @keyframes rise {
+      from {
+        transform: translateY(104%);
+      }
+    }
+
+    @keyframes widen {
+      from {
+        font-stretch: 62%;
+      }
+    }
+
+    @keyframes narrow {
+      from {
+        font-stretch: 125%;
+      }
+    }
+  }
+
+  .lede {
+    max-width: 22em;
+    font-size: clamp(17px, 1.45vw, 21px);
+    line-height: 1.32;
+    font-stretch: 96%;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .index ol {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .index-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .index .row-link {
+    position: relative;
+    font-size: 15px;
+  }
+
+  .index .t {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7em;
+    min-width: 0;
+    font-weight: 480;
+    transition: translate 0.5s var(--ease-out);
+  }
+
+  .index .num {
+    position: relative;
+    transition: color 0.3s;
+  }
+
+  .index .num::before {
+    content: "";
+    position: absolute;
+    left: -14px;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+    border-radius: 1px;
+    background: var(--accent);
+    scale: 0;
+    transition: scale 0.4s var(--ease-spring);
+  }
+
+  .index .is-current .num,
+  .index .is-on .num {
+    color: var(--accent);
+  }
+
+  .index .is-current,
+  .index .is-on {
+    color: var(--fg);
+  }
+
+  .index .is-on .t {
+    translate: 0.4em 0;
+  }
+
+  .index .is-on .num::before,
+  .index .is-current .num::before {
+    scale: 1;
+  }
+
+  .readout {
+    display: grid;
+    margin-top: 16px;
+    min-height: 3.2em;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .readout p {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    translate: 0 6px;
+    transition:
+      opacity 0.35s var(--ease-out),
+      translate 0.5s var(--ease-out);
+  }
+
+  .readout p.is-shown {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .ro-desc {
+    color: var(--fg);
+  }
+
+  .ro-tags {
+    color: var(--muted);
+  }
+
+  @media (max-width: 959px) {
+    .readout {
+      display: none;
+    }
+  }
+
+  .section + .section {
+    margin-top: clamp(120px, 16vw, 220px);
+  }
+
+  .today {
+    max-width: 26em;
+    font-size: clamp(22px, 2.35vw, 34px);
+    font-weight: 380;
+    font-stretch: 94%;
+    line-height: 1.22;
+    letter-spacing: -0.012em;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .today a,
+  .today em {
+    color: var(--fg);
+    font-style: normal;
+  }
+
+  .today a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.14em;
+    text-decoration-color: var(--line-2);
+    transition: text-decoration-color 0.3s;
+  }
+
+  .today a:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px var(--gap);
+    margin-top: 48px;
+  }
+
+  .facts div {
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+
+  .facts dd {
+    margin-top: 4px;
+    color: var(--fg);
+  }
+
+  #contact {
+    container-type: inline-size;
+  }
+
+  .intro {
+    max-width: 30em;
+    color: var(--fg-2);
+    font-size: 16px;
+  }
+
+  .mail {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.12em;
+    margin: 28px 0 48px;
+    font-size: min(8.7cqi, 140px);
+    font-weight: 700;
+    font-stretch: 78%;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--fg);
+    background: linear-gradient(currentColor, currentColor) no-repeat 0 100% /
+      0% 2px;
+    padding-bottom: 0.08em;
+    transition: background-size 0.6s var(--ease-out);
+  }
+
+  .mail:hover,
+  .mail:focus-visible {
+    background-size: 100% 2px;
+  }
+
+  .mail .arrow {
+    font-size: 0.5em;
+    font-stretch: 100%;
+    color: var(--muted);
+  }
+
+  .elsewhere {
+    max-width: 640px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .elsewhere .row-link {
+    font-size: 17px;
+  }
+
+  .colophon {
+    display: flex;
+    justify-content: space-between;
+    gap: 1em;
+    margin-top: clamp(80px, 12vw, 160px);
+  }
+</style>
+
+<script>
+  const rows = [
+    ...document.querySelectorAll<HTMLElement>(".index [data-project]"),
+  ]
+  const readouts = [...document.querySelectorAll<HTMLElement>("[data-readout]")]
+  const tiles = [
+    ...document.querySelectorAll<HTMLElement>(".tile[data-project]"),
+  ]
+
+  let current = ""
+  let hot = ""
+  let dim = false
+
+  const paint = () => {
+    const shown = hot || current
+    for (const r of rows) {
+      r.classList.toggle("is-on", r.dataset.project === hot)
+      r.classList.toggle("is-current", r.dataset.project === current)
+    }
+    for (const r of readouts)
+      r.classList.toggle("is-shown", r.dataset.readout === shown)
+    for (const t of tiles)
+      t.classList.toggle("is-dim", dim && t.dataset.project !== hot)
+  }
+
+  const heat = (slug: string, fromWall = false) => {
+    if (slug === hot && fromWall === dim) return
+    hot = slug
+    dim = fromWall && !!slug
+    paint()
+  }
+
+  const canHover = matchMedia("(hover: hover)").matches
+  for (const [list, fromWall] of [
+    [rows, false],
+    [tiles, true],
+  ] as const) {
+    for (const el of list) {
+      const on = () => heat(el.dataset.project!, fromWall)
+      if (canHover) el.addEventListener("pointerenter", on)
+      el.addEventListener("focus", on)
+      el.addEventListener("blur", () => heat(""))
+    }
+  }
+  if (canHover) {
+    for (const el of document.querySelectorAll(".index ol, [data-wall]"))
+      el.addEventListener("pointerleave", () => heat(""))
+  }
+
+  const seen = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue
+        current = (e.target as HTMLElement).dataset.project ?? ""
+        paint()
+      }
+    },
+    { rootMargin: "-48% 0px -48% 0px" }
+  )
+  for (const el of [...tiles, ...document.querySelectorAll("#about, #contact")])
+    seen.observe(el)
+
+  current = tiles[0]?.dataset.project ?? ""
+  paint()
+</script>

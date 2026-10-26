@@ -1,0 +1,199 @@
+---
+interface Props {
+  title: string
+}
+
+const { title } = Astro.props
+---
+
+<dialog class="lb" data-lightbox aria-label={`${title} images`}>
+  <p class="lb-cap"><b>{title}</b> — <span data-lb-cap></span></p>
+  <figure class="lb-stage" data-lb-stage>
+    <img alt="" data-lb-img />
+  </figure>
+  <div class="lb-bar">
+    <button type="button" data-lb-step="-1" aria-label="Previous image">
+      ←
+    </button>
+    <span class="lb-count" data-lb-count aria-live="polite"></span>
+    <button type="button" data-lb-step="1" aria-label="Next image">→</button>
+    <button type="button" class="lb-close" data-lb-close>Close</button>
+  </div>
+</dialog>
+
+<style>
+  .lb {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: #090908f0;
+    color: var(--fg);
+    overscroll-behavior: contain;
+  }
+
+  .lb[open] {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .lb::backdrop {
+    background: #0000;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .lb-cap {
+    padding: 18px var(--pad) 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .lb-cap b {
+    font-weight: 560;
+    color: var(--fg);
+  }
+
+  .lb-stage {
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    margin: 0;
+    padding: 16px var(--pad);
+  }
+
+  .lb-stage img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 3px;
+  }
+
+  .lb-bar {
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: max(16px, env(safe-area-inset-bottom));
+    padding: 5px;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    background: #1d1d1bcc;
+    font-size: 14px;
+    font-weight: 520;
+    font-stretch: 108%;
+  }
+
+  .lb-bar button {
+    padding: 9px 16px 10px;
+    border-radius: 999px;
+    line-height: 1;
+    color: var(--fg-2);
+    cursor: pointer;
+    transition:
+      color 0.25s,
+      background-color 0.25s;
+  }
+
+  .lb-bar button:hover {
+    color: var(--fg);
+    background: #ffffff12;
+  }
+
+  .lb-bar .lb-close {
+    margin-left: 4px;
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  .lb-bar .lb-close:hover {
+    background: #fff;
+    color: var(--bg);
+  }
+
+  .lb-count {
+    min-width: 5.5em;
+    text-align: center;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lb.is-single [data-lb-step],
+  .lb.is-single .lb-count {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lb[open] .lb-stage img {
+      animation: lb-in 0.7s var(--ease-out);
+    }
+
+    @keyframes lb-in {
+      from {
+        opacity: 0;
+        transform: scale(0.97);
+      }
+    }
+  }
+</style>
+
+<script>
+  const dlg = document.querySelector<HTMLDialogElement>("[data-lightbox]")
+  if (dlg) {
+    const tiles = [
+      ...document.querySelectorAll<HTMLAnchorElement>("[data-zoom]"),
+    ]
+    const img = dlg.querySelector<HTMLImageElement>("[data-lb-img]")!
+    const cap = dlg.querySelector<HTMLElement>("[data-lb-cap]")!
+    const count = dlg.querySelector<HTMLElement>("[data-lb-count]")!
+    const pad = (n: number) => String(n).padStart(2, "0")
+    let index = 0
+
+    dlg.classList.toggle("is-single", tiles.length < 2)
+
+    const show = (n: number) => {
+      index = (n + tiles.length) % tiles.length
+      const tile = tiles[index]
+      const thumb = tile.querySelector("img")
+      img.src = thumb?.currentSrc || tile.href
+      img.alt = thumb?.alt ?? ""
+      const full = new Image()
+      full.onload = () => {
+        if (tiles[index] === tile) img.src = full.src
+      }
+      full.src = tile.href
+      cap.textContent = [".cap-lead", ".cap-rest"]
+        .map((c) => tile.querySelector(c)?.textContent)
+        .join(" · ")
+      count.textContent = `${pad(index + 1)} / ${pad(tiles.length)}`
+    }
+
+    tiles.forEach((tile, n) =>
+      tile.addEventListener("click", (e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+        e.preventDefault()
+        show(n)
+        dlg.showModal()
+      })
+    )
+
+    for (const b of dlg.querySelectorAll<HTMLElement>("[data-lb-step]")) {
+      b.addEventListener("click", () => show(index + Number(b.dataset.lbStep)))
+    }
+    dlg
+      .querySelector("[data-lb-close]")!
+      .addEventListener("click", () => dlg.close())
+    dlg.addEventListener("click", (e) => {
+      if (e.target === dlg || e.target === dlg.querySelector("[data-lb-stage]"))
+        dlg.close()
+    })
+    dlg.addEventListener("keydown", (e) => {
+      if (tiles.length < 2) return
+      if (e.key === "ArrowLeft") show(index - 1)
+      if (e.key === "ArrowRight") show(index + 1)
+    })
+  }
+</script>

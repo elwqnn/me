@@ -1,0 +1,150 @@
+---
+interface Props {
+  title: string
+  note: string
+}
+
+const { title, note } = Astro.props
+
+const root = { x: 58, y: 132 }
+const branches = [
+  { y: 72, leaves: [50, 94] },
+  { y: 132, leaves: [116, 132, 148] },
+  { y: 192, leaves: [172, 214] },
+]
+const curve = (x1: number, y1: number, x2: number, y2: number) => {
+  const m = (x1 + x2) / 2
+  return `M${x1} ${y1}C${m} ${y1} ${m} ${y2} ${x2} ${y2}`
+}
+const trunk = branches.map((b) => curve(root.x, root.y, 200, b.y))
+const twigs = branches.flatMap((b) =>
+  b.leaves.map((l) => curve(200, b.y, 342, l))
+)
+---
+
+<svg
+  class="fanout"
+  viewBox="0 0 400 300"
+  role="img"
+  aria-label={`${title}: one publisher fanning out to seven subscribers through a subject tree`}
+>
+  <text x="20" y="34" class="fo-note">{note}</text>
+  <text x="380" y="34" class="fo-note" text-anchor="end">pub / sub</text>
+  <g class="fo-edges">
+    {trunk.map((d) => <path d={d} />)}
+    {twigs.map((d) => <path d={d} />)}
+  </g>
+  <g class="fo-pkts" aria-hidden="true">
+    {trunk.map((d) => <path d={d} pathLength="50" class="fo-a" />)}
+    {twigs.map((d) => <path d={d} pathLength="50" class="fo-b" />)}
+  </g>
+  <circle cx={root.x} cy={root.y} r="10" class="fo-root"></circle>
+  {branches.map((b) => <circle cx="200" cy={b.y} r="6" class="fo-node" />)}
+  {
+    branches.flatMap((b) =>
+      b.leaves.map((l) => (
+        <rect
+          x="338"
+          y={l - 4.5}
+          width="9"
+          height="9"
+          rx="1.5"
+          class="fo-leaf"
+        />
+      ))
+    )
+  }
+  <text x="16" y="282" class="fo-title">{title}</text>
+</svg>
+
+<style>
+  .fanout {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--accent);
+    color: #0c0c0b;
+  }
+
+  .fo-note {
+    font-size: 9.5px;
+    font-weight: 600;
+    font-stretch: 118%;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    fill: currentColor;
+    opacity: 0.72;
+  }
+
+  .fo-title {
+    font-size: 84px;
+    font-weight: 820;
+    font-stretch: 72%;
+    letter-spacing: -0.03em;
+    fill: currentColor;
+  }
+
+  .fo-edges path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.25;
+    opacity: 0.55;
+  }
+
+  .fo-pkts path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3.2;
+    stroke-linecap: round;
+    stroke-dasharray: 4 96;
+    stroke-dashoffset: 4;
+    display: none;
+  }
+
+  .fo-root,
+  .fo-leaf {
+    fill: currentColor;
+  }
+
+  .fo-node {
+    fill: var(--accent);
+    stroke: currentColor;
+    stroke-width: 2;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fo-pkts path {
+      display: inline;
+    }
+
+    .fo-a {
+      animation: fo-a 3.2s var(--ease-io) infinite;
+    }
+
+    .fo-b {
+      animation: fo-b 3.2s var(--ease-io) infinite;
+    }
+  }
+
+  @keyframes fo-a {
+    0% {
+      stroke-dashoffset: 4;
+    }
+    34%,
+    100% {
+      stroke-dashoffset: -50;
+    }
+  }
+
+  @keyframes fo-b {
+    0%,
+    30% {
+      stroke-dashoffset: 4;
+    }
+    68%,
+    100% {
+      stroke-dashoffset: -50;
+    }
+  }
+</style>

@@ -1,0 +1,387 @@
+---
+import type { Shot } from "@/lib/projects"
+import Fanout from "./Fanout.astro"
+
+export interface Tile {
+  href?: string
+  slug: string
+  title: string
+  accent: string
+  alt: string
+  lead: string
+  rest: string
+  shot?: Shot
+  note?: string
+  wide?: boolean
+  quiet?: boolean
+  isNew?: boolean
+  zoom?: number
+}
+
+interface Props {
+  tiles: Tile[]
+  variant: "home" | "project"
+}
+
+const { tiles, variant } = Astro.props
+
+const sizes = {
+  home: {
+    one: "(min-width: 1600px) 21vw, (min-width: 960px) 31vw, 50vw",
+    two: "(min-width: 1600px) 42vw, (min-width: 960px) 62vw, 100vw",
+  },
+  project: {
+    one: "(min-width: 960px) 31vw, (min-width: 560px) 50vw, 100vw",
+    two: "(min-width: 960px) 62vw, 100vw",
+  },
+}[variant]
+---
+
+<div class="wall" data-wall data-variant={variant}>
+  {
+    tiles.map(({ href, ...t }) => {
+      const Box = href ? "a" : "div"
+      return (
+        <Box
+          class="tile"
+          href={href}
+          data-project={t.slug}
+          data-wide={t.wide ? "" : undefined}
+          data-zoom={t.zoom}
+          tabindex={t.quiet ? -1 : undefined}
+          style={`--accent: ${t.accent}`}
+        >
+          <span
+            class="media"
+            style={`aspect-ratio: ${t.shot ? `${t.shot.width} / ${t.shot.height}` : "4 / 3"}`}
+          >
+            {t.shot ? (
+              <img
+                src={t.shot.thumb}
+                srcset={t.shot.srcset}
+                sizes={
+                  t.shot.srcset ? (t.wide ? sizes.two : sizes.one) : undefined
+                }
+                width={t.shot.width}
+                height={t.shot.height}
+                alt={t.alt}
+                loading="lazy"
+                decoding="async"
+                class:list={{ pixel: t.shot.small }}
+              />
+            ) : (
+              <Fanout title={t.title} note={t.note ?? ""} />
+            )}
+            {t.isNew && (
+              <span class="new tile-new" aria-hidden="true">
+                New
+              </span>
+            )}
+          </span>
+          <span class="cap" aria-hidden="true">
+            <span class="cap-lead">{t.lead}</span>
+            <span class="cap-rest">{t.rest}</span>
+            {href && (
+              <span class="cap-arrow">{t.zoom === undefined ? "↗" : "+"}</span>
+            )}
+          </span>
+        </Box>
+      )
+    })
+  }
+</div>
+
+<style>
+  .wall {
+    --cols: 2;
+    --row-gap: calc(var(--gap) * 2.2);
+    columns: var(--cols);
+    column-gap: var(--gap);
+  }
+
+  .wall[data-variant="project"] {
+    --cols: 1;
+  }
+
+  @media (min-width: 560px) {
+    .wall[data-variant="project"] {
+      --cols: 2;
+    }
+  }
+
+  @media (min-width: 1600px) {
+    .wall[data-variant="home"] {
+      --cols: 3;
+    }
+  }
+
+  .tile {
+    position: relative;
+    display: block;
+    break-inside: avoid;
+    margin-bottom: var(--row-gap);
+    color: var(--fg-2);
+    transition:
+      opacity 0.5s var(--ease-out),
+      filter 0.5s var(--ease-out);
+  }
+
+  .tile[data-wide] {
+    column-span: all;
+  }
+
+  .wall.is-laid {
+    position: relative;
+    columns: auto;
+  }
+
+  .wall.is-laid .tile {
+    position: absolute;
+    margin: 0;
+  }
+
+  .tile.is-dim {
+    opacity: 0.3;
+    filter: grayscale(1);
+  }
+
+  .media {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: 3px;
+    background: color-mix(in oklab, var(--accent) 16%, var(--bg-2));
+  }
+
+  .media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 1.1s var(--ease-out);
+  }
+
+  .media img.pixel {
+    image-rendering: pixelated;
+  }
+
+  .tile:hover .media img,
+  .tile:focus-visible .media img {
+    transform: scale(1.03);
+  }
+
+  .tile:focus-visible {
+    outline: none;
+  }
+
+  .tile:focus-visible .media {
+    outline: 2px solid var(--fg);
+    outline-offset: 3px;
+  }
+
+  .tile-new {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #0c0c0bb3;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .cap {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4em;
+    padding-top: 10px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+
+  .cap-lead {
+    flex: none;
+    font-weight: 560;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cap-rest {
+    min-width: 0;
+  }
+
+  .cap-arrow {
+    margin-left: auto;
+    color: var(--accent);
+    opacity: 0;
+    translate: -4px 0;
+    transition:
+      opacity 0.3s,
+      translate 0.5s var(--ease-out);
+  }
+
+  .tile:hover .cap-arrow,
+  .tile:focus-visible .cap-arrow {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  @media (hover: none) {
+    .cap-arrow {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
+
+  @media (max-width: 559px) {
+    .wall[data-variant="home"] .cap {
+      flex-wrap: wrap;
+      column-gap: 0.3em;
+      row-gap: 0;
+      font-size: 12px;
+    }
+
+    .wall[data-variant="home"] .cap-arrow {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .wall.is-laid .tile:not(.is-in) .media {
+      clip-path: inset(100% 0 0 0);
+    }
+
+    .wall.is-laid .tile:not(.is-in) .media img,
+    .wall.is-laid .tile:not(.is-in) .media :global(.fanout) {
+      transform: scale(1.18) translateY(-4%);
+    }
+
+    .wall.is-laid .tile:not(.is-in) .cap {
+      opacity: 0;
+      translate: 0 8px;
+    }
+
+    .wall.is-laid .media {
+      clip-path: inset(0 0 0 0);
+      transition: clip-path 1.1s var(--ease-out) var(--d, 0ms);
+    }
+
+    .wall.is-laid .media img,
+    .wall.is-laid .media :global(.fanout) {
+      transition: transform 1.4s var(--ease-out) var(--d, 0ms);
+    }
+
+    .wall.is-laid .tile.is-in:hover .media img {
+      transition-delay: 0ms;
+    }
+
+    .wall.is-laid .cap {
+      transition:
+        opacity 0.8s var(--ease-out) calc(var(--d, 0ms) + 200ms),
+        translate 0.8s var(--ease-out) calc(var(--d, 0ms) + 200ms);
+    }
+  }
+</style>
+
+<script>
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+
+  const reveal = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue
+        e.target.classList.add("is-in")
+        reveal.unobserve(e.target)
+      }
+    },
+    { rootMargin: "0px 0px -8% 0px" }
+  )
+
+  for (const wall of document.querySelectorAll<HTMLElement>("[data-wall]")) {
+    const tiles = [...wall.querySelectorAll<HTMLElement>(".tile")]
+    let lastWidth = 0
+
+    const layout = (force = false) => {
+      const width = wall.clientWidth
+      if (!force && width === lastWidth) return
+      lastWidth = width
+      const cs = getComputedStyle(wall)
+      const cols = Math.max(1, parseInt(cs.getPropertyValue("--cols")) || 1)
+      const gap = parseFloat(cs.columnGap) || 0
+      const rowGap = parseFloat(cs.getPropertyValue("--row-gap")) || gap
+      const colW = (width - gap * (cols - 1)) / cols
+      const spans = tiles.map((t) =>
+        t.hasAttribute("data-wide") ? Math.min(2, cols) : 1
+      )
+      tiles.forEach((t, i) => {
+        t.style.width = `${colW * spans[i] + gap * (spans[i] - 1)}px`
+      })
+      const heights = tiles.map((t) => t.offsetHeight)
+      const ys = new Array<number>(cols).fill(0)
+      const fit = (span: number) => {
+        let col = 0
+        let y = Infinity
+        for (let c = 0; c + span <= cols; c++) {
+          const top = Math.max(...ys.slice(c, c + span))
+          if (top < y - 1) {
+            y = top
+            col = c
+          }
+        }
+        const hole = ys
+          .slice(col, col + span)
+          .reduce((sum, h) => sum + y - h, 0)
+        return { col, y, hole }
+      }
+      const put = (i: number) => {
+        const { col, y } = fit(spans[i])
+        const t = tiles[i]
+        t.style.left = `${col * (colW + gap)}px`
+        t.style.top = `${y}px`
+        t.style.setProperty("--d", `${col * 90}ms`)
+        ys.fill(y + heights[i] + rowGap, col, col + spans[i])
+      }
+      const tolerance = colW * 0.25
+      let held: number | null = null
+      let waited = 0
+      tiles.forEach((_, i) => {
+        if (held === null && spans[i] > 1 && fit(spans[i]).hole > tolerance) {
+          held = i
+          waited = 0
+          return
+        }
+        put(i)
+        if (
+          held !== null &&
+          (fit(spans[held]).hole <= tolerance || ++waited >= 3)
+        ) {
+          put(held)
+          held = null
+        }
+      })
+      if (held !== null) put(held)
+      wall.style.height = `${Math.max(...ys) - rowGap}px`
+    }
+
+    wall.classList.add("is-laid")
+    layout(true)
+    new ResizeObserver(() => layout()).observe(wall)
+    document.fonts.ready.then(() => layout(true))
+    tiles.forEach((t) => reveal.observe(t))
+
+    if (reduced) {
+      for (const img of wall.querySelectorAll<HTMLImageElement>(
+        'img[src$=".gif"]'
+      )) {
+        const freeze = () => {
+          const c = document.createElement("canvas")
+          c.width = img.naturalWidth
+          c.height = img.naturalHeight
+          c.getContext("2d")?.drawImage(img, 0, 0)
+          c.toBlob((b) => b && (img.src = URL.createObjectURL(b)))
+        }
+        if (img.complete && img.naturalWidth) freeze()
+        else img.addEventListener("load", freeze, { once: true })
+      }
+    }
+  }
+</script>
