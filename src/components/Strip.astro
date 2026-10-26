@@ -403,7 +403,7 @@ const { projects } = Astro.props
     strip.addEventListener(
       "click",
       (e) => {
-        if (moved > 5) {
+        if (moved > 5 && e.detail > 0) {
           e.preventDefault()
           e.stopPropagation()
         }
@@ -411,6 +411,12 @@ const { projects } = Astro.props
       },
       true
     )
+    strip.addEventListener("focusin", (e) => {
+      stop()
+      ;(e.target as HTMLElement)
+        .closest("li")
+        ?.scrollIntoView({ inline: "nearest", block: "nearest" })
+    })
     strip.addEventListener("wheel", stop, { passive: true })
     strip.addEventListener("touchstart", stop, { passive: true })
   }

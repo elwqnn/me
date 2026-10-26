@@ -123,7 +123,7 @@ const allLinks = [
           visuals.map((s, i) => (
             <>
               {s ? (
-                <figure class="shot" data-n={i}>
+                <figure class="shot">
                   <a
                     href={s.src}
                     data-shot
@@ -135,7 +135,10 @@ const allLinks = [
                       width={s.width}
                       height={s.height}
                       style={`--ar:${s.width}/${s.height}`}
-                      class:list={{ pixel: s.width < 1000 }}
+                      class:list={{
+                        pixel: s.width < 1000,
+                        tall: s.height >= s.width,
+                      }}
                       loading={i === 0 ? "eager" : "lazy"}
                       decoding="async"
                     />
@@ -321,9 +324,14 @@ const allLinks = [
   }
 
   .shot img {
-    width: min(100%, 92svh * var(--ar));
+    width: 100%;
     background: var(--paper-2);
     box-shadow: 0 0 0 1px var(--line);
+  }
+
+  .shot .tall {
+    width: min(100%, 92svh * var(--ar));
+    margin-inline: auto;
   }
 
   .pixel {
@@ -495,10 +503,6 @@ const allLinks = [
       position: static;
       align-self: stretch;
     }
-
-    .shot img {
-      width: 100%;
-    }
   }
 </style>
 
@@ -508,19 +512,23 @@ const allLinks = [
   const at = document.querySelector<HTMLElement>("[data-at]")
   const figures = document.querySelectorAll<HTMLElement>(".shot")
   if (at && figures.length) {
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            at.textContent = pad(
-              Number(entry.target.getAttribute("data-n")) + 1
-            )
-          }
-        }
+    let raf = 0
+    const update = () => {
+      raf = 0
+      let n = 0
+      figures.forEach((f, i) => {
+        if (f.getBoundingClientRect().top < innerHeight / 2) n = i
+      })
+      at.textContent = pad(n + 1)
+    }
+    addEventListener(
+      "scroll",
+      () => {
+        if (!raf) raf = requestAnimationFrame(update)
       },
-      { rootMargin: "-50% 0px -50% 0px" }
+      { passive: true }
     )
-    figures.forEach((f) => io.observe(f))
+    update()
   }
 
   const dialog = document.querySelector<HTMLDialogElement>("[data-lb]")
