@@ -1,0 +1,92 @@
+---
+import Arrow from "./Arrow.astro"
+
+interface Props {
+  images: string[]
+  title: string
+}
+
+const { images, title } = Astro.props
+---
+
+<dialog
+  class="lightbox"
+  aria-label={`${title} images`}
+  data-images={JSON.stringify(images)}
+  data-title={title}
+>
+  <figure class="lightbox__stage">
+    <img class="lightbox__img" alt="" />
+  </figure>
+  <div class="lightbox__bar">
+    <p class="lightbox__count" aria-live="polite"></p>
+    <div class="lightbox__nav">
+      {
+        images.length > 1 && (
+          <>
+            <button
+              type="button"
+              class="round"
+              data-step="-1"
+              aria-label="Previous image"
+            >
+              <Arrow class="arrow--back" />
+            </button>
+            <button
+              type="button"
+              class="round"
+              data-step="1"
+              aria-label="Next image"
+            >
+              <Arrow />
+            </button>
+          </>
+        )
+      }
+      <button type="button" class="pill" data-close>Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>("dialog.lightbox")
+  if (dialog) {
+    const images: string[] = JSON.parse(dialog.dataset.images ?? "[]")
+    const title = dialog.dataset.title ?? ""
+    const img = dialog.querySelector<HTMLImageElement>(".lightbox__img")!
+    const count = dialog.querySelector<HTMLElement>(".lightbox__count")!
+    let index = 0
+
+    const show = (next: number) => {
+      index = (next + images.length) % images.length
+      img.src = images[index]
+      img.alt = `${title}, image ${index + 1} of ${images.length}`
+      count.textContent = `${String(index + 1).padStart(2, "0")} / ${String(images.length).padStart(2, "0")}`
+    }
+
+    document.querySelectorAll<HTMLElement>("[data-open-image]").forEach((el) =>
+      el.addEventListener("click", () => {
+        show(Number(el.dataset.openImage))
+        dialog.showModal()
+      })
+    )
+
+    dialog
+      .querySelectorAll<HTMLElement>("[data-step]")
+      .forEach((el) =>
+        el.addEventListener("click", () =>
+          show(index + Number(el.dataset.step))
+        )
+      )
+    dialog
+      .querySelector("[data-close]")
+      ?.addEventListener("click", () => dialog.close())
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog || e.target === img.parentElement) dialog.close()
+    })
+    dialog.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") show(index + 1)
+      if (e.key === "ArrowLeft") show(index - 1)
+    })
+  }
+</script>

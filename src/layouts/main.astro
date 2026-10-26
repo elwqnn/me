@@ -1,27 +1,47 @@
 ---
 import "@/styles/global.css"
+import displayFont from "@fontsource-variable/big-shoulders-display/files/big-shoulders-display-latin-wght-normal.woff2?url"
+import textFont from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url"
+import { HOME_BG } from "@/components/projects"
 
 interface Props {
   title?: string
   description?: string
   image?: string
+  bg?: string
 }
 
 const {
   title = "Elwann Guillemot",
   description = "Back-end developer focused on performance and user experience. Currently studying abroad at Hanze University in Groningen.",
   image,
+  bg = HOME_BG,
 } = Astro.props
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 ---
 
-<html lang="en">
+<html lang="en" style={`--bg: ${bg}`}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content={bg} />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link
+      rel="preload"
+      href={displayFont}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href={textFont}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="canonical" href={canonicalURL} />
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -61,18 +81,103 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
     />
 
     <script is:inline>
-      const theme = localStorage.getItem("theme") ?? "system"
-      const isDark =
-        theme === "dark" ||
-        (theme === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      if (isDark) document.documentElement.classList.add("dark")
+      document.documentElement.classList.add("js")
+      setTimeout(() => document.documentElement.classList.add("fitted"), 1500)
     </script>
   </head>
   <body>
-    <div class="relative isolate min-h-screen">
-      <slot />
-      <div class="noise-overlay" aria-hidden="true"></div>
-    </div>
+    <slot />
+    <div class="grain" aria-hidden="true"></div>
   </body>
 </html>
+
+<script>
+  const root = document.documentElement
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+  const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches
+
+  const fitTargets = [...document.querySelectorAll<HTMLElement>("[data-fit]")]
+  const fit = () => {
+    for (const el of fitTargets) {
+      const box = el.parentElement
+      if (!box) continue
+      el.style.fontSize = "100px"
+      const width = el.getBoundingClientRect().width
+      if (!width) continue
+      const cap = parseFloat(el.style.getPropertyValue("--cap"))
+      const max = cap ? (cap / 100) * window.innerHeight : 0
+      const size = (100 * box.clientWidth) / width
+      el.style.fontSize = `${max ? Math.min(size, max) : size}px`
+    }
+  }
+  let lastWidth = 0
+  const refit = () => {
+    if (window.innerWidth === lastWidth) return
+    lastWidth = window.innerWidth
+    fit()
+  }
+  document.fonts.ready.then(() => {
+    fit()
+    lastWidth = window.innerWidth
+    root.classList.add("fitted")
+  })
+  window.addEventListener("resize", refit)
+
+  const sections = [...document.querySelectorAll<HTMLElement>("[data-bg]")]
+  const themeColor = document.querySelector<HTMLMetaElement>(
+    'meta[name="theme-color"]'
+  )
+  if (!reduce && sections.length) {
+    root.classList.add("live")
+    const pick = () => {
+      const middle = window.innerHeight / 2
+      let color = sections[0].dataset.bg!
+      for (const section of sections)
+        if (section.getBoundingClientRect().top <= middle)
+          color = section.dataset.bg!
+      root.style.setProperty("--bg", color)
+      themeColor?.setAttribute("content", color)
+    }
+    const io = new IntersectionObserver(pick, {
+      rootMargin: "-50% 0px -50% 0px",
+    })
+    sections.forEach((section) => io.observe(section))
+  }
+
+  if (finePointer && !reduce) {
+    document.querySelectorAll<HTMLElement>("[data-tilt]").forEach((zone) => {
+      const card = zone.querySelector<HTMLElement>(".tilt")
+      if (!card) return
+      let targetX = 0
+      let targetY = 0
+      let x = 0
+      let y = 0
+      let frame = 0
+      const tick = () => {
+        x += (targetX - x) * 0.14
+        y += (targetY - y) * 0.14
+        card.style.setProperty("--tx", x.toFixed(4))
+        card.style.setProperty("--ty", y.toFixed(4))
+        const settled =
+          Math.abs(targetX - x) < 0.0005 && Math.abs(targetY - y) < 0.0005
+        frame = settled ? 0 : requestAnimationFrame(tick)
+      }
+      const start = () => {
+        if (!frame) frame = requestAnimationFrame(tick)
+      }
+      zone.addEventListener("pointermove", (e) => {
+        const rect = zone.getBoundingClientRect()
+        targetX = (e.clientX - rect.left) / rect.width - 0.5
+        targetY = (e.clientY - rect.top) / rect.height - 0.5
+        card.classList.add("is-tilting")
+        start()
+      })
+      zone.addEventListener("pointerleave", () => {
+        targetX = 0
+        targetY = 0
+        card.classList.remove("is-tilting")
+        start()
+      })
+    })
+  }
+</script>

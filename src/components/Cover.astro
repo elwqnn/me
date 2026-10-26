@@ -1,0 +1,49 @@
+---
+interface Props {
+  src?: string
+  title: string
+  tags: string[]
+  accent: string
+  eager?: boolean
+  class?: string
+}
+
+const {
+  src,
+  title,
+  tags,
+  accent,
+  eager = false,
+  class: className,
+} = Astro.props
+---
+
+{
+  src ? (
+    <img
+      class:list={["cover", className]}
+      src={src}
+      alt={`${title} cover`}
+      loading={eager ? "eager" : "lazy"}
+      decoding="async"
+      fetchpriority={eager ? "high" : "auto"}
+    />
+  ) : (
+    <div
+      class:list={["cover typecover", className]}
+      style={`--accent: ${accent}; --n: ${title.length}`}
+      role="img"
+      aria-label={`${title}: ${tags.join(", ")}`}
+    >
+      <span class="typecover__dots" />
+      <span class="typecover__stack" aria-hidden="true">
+        <span class="typecover__word typecover__word--ghost">{title}</span>
+        <span class="typecover__word typecover__word--ghost">{title}</span>
+        <span class="typecover__word">{title}</span>
+      </span>
+      <span class="typecover__tags" aria-hidden="true">
+        {tags.join(" / ")}
+      </span>
+    </div>
+  )
+}

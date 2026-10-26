@@ -1,0 +1,36 @@
+---
+interface Props {
+  items: string[]
+  repeat?: number
+  reverse?: boolean
+  speed?: number
+  class?: string
+}
+
+const {
+  items,
+  repeat = 1,
+  reverse = false,
+  speed = 40,
+  class: className,
+} = Astro.props
+const group = Array.from({ length: repeat }, () => items).flat()
+---
+
+<div
+  class:list={["marquee", className, { "marquee--reverse": reverse }]}
+  style={`--speed: ${speed}s`}
+  aria-hidden="true"
+>
+  <div class="marquee__track">
+    {
+      [0, 1].map(() => (
+        <div class="marquee__group">
+          {group.map((item) => (
+            <span class="marquee__item">{item}</span>
+          ))}
+        </div>
+      ))
+    }
+  </div>
+</div>

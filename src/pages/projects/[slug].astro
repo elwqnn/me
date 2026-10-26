@@ -1,131 +1,235 @@
 ---
-import { getCollection, render } from "astro:content"
+import { render } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ImageHero, ImageGrid } from "@/components/ImageGallery"
-import { ArrowLeft, ExternalLink, Github } from "@/components/icons"
+import Arrow from "@/components/Arrow.astro"
+import Contact from "@/components/Contact.astro"
+import Cover from "@/components/Cover.astro"
+import Lightbox from "@/components/Lightbox.astro"
+import Marquee from "@/components/Marquee.astro"
+import Sticker from "@/components/Sticker.astro"
+import {
+  HOME_BG,
+  cleanSrc,
+  getProjects,
+  isWide,
+  pad,
+  titleLines,
+} from "@/components/projects"
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects")
-  return projects.map((project) => ({
+  const projects = await getProjects()
+  return projects.map((project, i) => ({
     params: { slug: project.id },
-    props: { project },
+    props: {
+      project,
+      index: i,
+      total: projects.length,
+      next: projects[(i + 1) % projects.length],
+    },
   }))
 }
 
-const { project } = Astro.props
+const { project, index, total, next } = Astro.props
 const { Content } = await render(project)
 const { title, description, tags, images, links, githubUrl, liveUrl, year } =
   project.data
+const accent = project.data.accentColor ?? HOME_BG
+const nextAccent = next.data.accentColor ?? HOME_BG
+const sources = images.map(cleanSrc)
+const allLinks = [
+  ...links,
+  ...(liveUrl ? [{ label: "Live preview", url: liveUrl }] : []),
+  ...(githubUrl ? [{ label: "Source code", url: githubUrl }] : []),
+]
 ---
 
 <Layout
   title={`${title} — Elwann Guillemot`}
   description={description}
-  image={images[0]}
+  image={sources[0]}
+  bg={accent}
 >
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <a
-          href="/#projects"
-          class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-        >
-          <ArrowLeft
-            size={14}
-            className="transition-transform duration-200 group-hover:-translate-x-0.5"
-          />
-          Back to projects
-        </a>
-        <ThemeToggle client:load />
-      </header>
+  <header id="top" class="phero">
+    <nav class="topbar" aria-label="Main">
+      <a href="/" class="topbar__mark" aria-label="Elwann Guillemot, home">EG</a
+      >
+      <span class="topbar__meta">Project {pad(index + 1)} / {pad(total)}</span>
+      <span class="topbar__meta">{year}</span>
+      <ul class="topbar__nav">
+        <li>
+          <a href="/#work" class="topbar__back">
+            <Arrow class="arrow--back" /> All work
+          </a>
+        </li>
+      </ul>
+    </nav>
 
-      <header class="mb-12">
-        <h1 class="mb-3 text-3xl font-bold">{title}</h1>
-        <p class="mb-6 text-lg text-muted-foreground">{description}</p>
-        <p class="text-xs text-muted-foreground/40">
-          {tags.join(" · ")}
-        </p>
-      </header>
+    <div class="phero__meta">
+      <span>No. {pad(index + 1)}</span>
+      <span class="poster__rule"></span>
+      <span>{year}</span>
+    </div>
 
-      <div class="mb-12">
-        <ImageHero images={images} title={title} client:load />
-      </div>
-
-      <div class="mb-12 grid gap-12 md:grid-cols-3">
-        <div class="col-span-2">
-          <h2 class="mb-4 text-xl font-semibold">About the project</h2>
-          <div
-            class="space-y-4 text-muted-foreground [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors [&_a:hover]:text-primary"
-          >
-            <Content />
-          </div>
-        </div>
-
-        <div class="space-y-6">
-          <div>
-            <h3
-              class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase"
-            >
-              Year
-            </h3>
-            <p class="text-sm">{year}</p>
-          </div>
-
-          {
-            (links.length > 0 || liveUrl || githubUrl) && (
-              <div>
-                <h3 class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  Links
-                </h3>
-                <div class="space-y-2">
-                  {links.map(({ label, url }) => (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      {label}
-                    </a>
-                  ))}
-                  {liveUrl && (
-                    <a
-                      href={liveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      Live Preview
-                    </a>
-                  )}
-                  {githubUrl && (
-                    <a
-                      href={githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <Github size={14} />
-                      Source Code
-                    </a>
-                  )}
-                </div>
-              </div>
-            )
-          }
-        </div>
-      </div>
-
+    <h1 class="phero__title">
       {
-        images.length > 1 && (
-          <div class="mb-12">
-            <ImageGrid images={images} title={title} client:load />
+        titleLines(title).map((line) => (
+          <span class="poster__line fit-box">
+            <span
+              class="fit"
+              data-fit
+              style={`--n: ${line.length}; --cap: 60vh`}
+            >
+              {line}
+            </span>
+          </span>
+        ))
+      }
+    </h1>
+
+    <div class="phero__intro">
+      <p class="phero__desc">{description}</p>
+      <ul class="chips" aria-label="Stack">
+        {tags.map((tag) => <li>{tag}</li>)}
+      </ul>
+    </div>
+
+    <div class="phero__cover" data-tilt>
+      {
+        sources[0] ? (
+          <button
+            type="button"
+            class="tilt"
+            data-open-image="0"
+            aria-label={`Open the ${title} cover full size`}
+          >
+            <span class="tilt__frame">
+              <Cover
+                src={sources[0]}
+                title={title}
+                tags={tags}
+                accent={accent}
+                eager
+              />
+            </span>
+            {project.data.isNew && <Sticker class="phero__sticker" />}
+          </button>
+        ) : (
+          <div class="tilt">
+            <span class="tilt__frame">
+              <Cover title={title} tags={tags} accent={accent} />
+            </span>
+            {project.data.isNew && <Sticker class="phero__sticker" />}
           </div>
         )
       }
     </div>
-  </div>
+  </header>
+
+  <Marquee
+    items={tags}
+    repeat={6}
+    class="band band--ink band--flat"
+    speed={30}
+  />
+
+  <section class="pbody" aria-label="About the project">
+    <div class="prose">
+      <h2 class="label">About the project</h2>
+      <Content />
+    </div>
+    <aside class="facts">
+      <dl>
+        <div>
+          <dt class="label">Year</dt>
+          <dd class="facts__big">{year}</dd>
+        </div>
+        <div>
+          <dt class="label">Stack</dt>
+          <dd>{tags.join(", ")}</dd>
+        </div>
+      </dl>
+      {
+        allLinks.length > 0 && (
+          <div>
+            <h2 class="label">Links</h2>
+            <ul class="facts__links">
+              {allLinks.map(({ label, url }) => (
+                <li>
+                  <a href={url} target="_blank" rel="noopener noreferrer">
+                    {label}
+                    <Arrow class="arrow--out" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </aside>
+  </section>
+
+  {
+    images.length > 1 && (
+      <section class="gallery" aria-labelledby="gallery-title">
+        <div class="gallery__head">
+          <h2 id="gallery-title" class="gallery__title">
+            Gallery
+          </h2>
+          <span class="label">{pad(images.length - 1)} more images</span>
+        </div>
+        <div class="gallery__grid">
+          {images.slice(1).map((src, i) => (
+            <button
+              type="button"
+              class:list={["shot", { "shot--wide": isWide(src) }]}
+              data-open-image={i + 1}
+              aria-label={`Open image ${i + 2} of ${images.length} full size`}
+            >
+              <img
+                src={cleanSrc(src)}
+                alt={`${title}, image ${i + 2}`}
+                loading="lazy"
+                decoding="async"
+              />
+            </button>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <a
+    class="next"
+    href={`/projects/${next.id}`}
+    style={`--section: ${nextAccent}`}
+  >
+    <span class="next__meta">
+      <span>Next project</span>
+      <span class="poster__rule"></span>
+      <span>No. {pad(((index + 1) % total) + 1)}</span>
+    </span>
+    <span class="next__title">
+      {
+        titleLines(next.data.title).map((line) => (
+          <span class="poster__line fit-box">
+            <span
+              class="fit"
+              data-fit
+              style={`--n: ${line.length}; --cap: 60vh`}
+            >
+              {line}
+            </span>
+          </span>
+        ))
+      }
+    </span>
+    <span class="next__go">
+      <span>{next.data.description}</span>
+      <Arrow />
+    </span>
+  </a>
+
+  <Contact />
+
+  {sources.length > 0 && <Lightbox images={sources} title={title} />}
 </Layout>

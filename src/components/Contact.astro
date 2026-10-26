@@ -1,0 +1,67 @@
+---
+import Arrow from "./Arrow.astro"
+
+interface Props {
+  number?: string
+}
+
+const { number } = Astro.props
+const year = new Date().getFullYear()
+const rows = [
+  {
+    label: "Email",
+    value: "elwann.guillemot@epitech.eu",
+    href: "mailto:elwann.guillemot@epitech.eu",
+    external: false,
+  },
+  {
+    label: "GitHub",
+    value: "@elwqnn",
+    href: "https://github.com/elwqnn",
+    external: true,
+  },
+  {
+    label: "Resume",
+    value: "PDF",
+    href: "/documents/elwann_guillemot_resume.pdf",
+    external: false,
+  },
+]
+---
+
+<footer id="contact" class="contact">
+  <p class="label">{number && <span>({number})</span>} Contact</p>
+  <h2 class="contact__title fit-box">
+    <span class="fit" data-fit style="--n: 9">Say hello</span>
+  </h2>
+  <div class="contact__grid">
+    <p class="contact__lead">
+      Feel free to reach out if you're looking to collaborate on a project, have
+      a job opportunity, or just want to connect.
+    </p>
+    <ul class="contact__links">
+      {
+        rows.map(({ label, value, href, external }) => (
+          <li>
+            <a
+              class="contact__row"
+              href={href}
+              {...(external
+                ? { target: "_blank", rel: "noopener noreferrer" }
+                : {})}
+            >
+              <span class="contact__label">{label}</span>
+              <span class="contact__value">{value}</span>
+              <Arrow />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+  <div class="footer">
+    <span>© {year} Elwann Guillemot</span>
+    <span class="footer__fonts">Set in Big Shoulders Display &amp; Geist</span>
+    <a href="#top">Back to top ↑</a>
+  </div>
+</footer>

@@ -1,107 +1,232 @@
 ---
-import { getCollection } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ProjectShowcase } from "@/components/ProjectShowcase"
-import { ExternalLinkIcon } from "@/components/icons"
+import Arrow from "@/components/Arrow.astro"
+import Contact from "@/components/Contact.astro"
+import Cover from "@/components/Cover.astro"
+import Marquee from "@/components/Marquee.astro"
+import Sticker from "@/components/Sticker.astro"
+import {
+  HOME_BG,
+  cleanSrc,
+  getProjects,
+  pad,
+  titleLines,
+} from "@/components/projects"
 
-const projects = (await getCollection("projects")).sort(
-  (a, b) => a.data.order - b.data.order
-)
+const projects = await getProjects()
+const allTags = [...new Set(projects.flatMap((p) => p.data.tags))]
+const half = Math.ceil(allTags.length / 2)
+const bandB = [...allTags.slice(half), ...allTags.slice(0, half)]
+const nameLines = [
+  { word: "Elwann", width: 7.4 },
+  { word: "Guillemot", width: 9.5 },
+].map(({ word, width }, line) => ({
+  width,
+  chars: [...word].map((char, i) => ({ char, i: i + line * 6 })),
+}))
 ---
 
 <Layout>
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <div class="flex flex-col">
-          <a
-            href="/"
-            class="text-sm font-medium transition-colors duration-200 hover:text-primary"
-          >
-            Elwann Guillemot
-          </a>
-          <span class="text-sm text-muted-foreground">Back-end Developer</span>
-        </div>
-        <ThemeToggle client:load />
-      </header>
+  <header
+    id="top"
+    class="hero"
+    data-bg={HOME_BG}
+    style={`--section: ${HOME_BG}`}
+  >
+    <nav class="topbar" aria-label="Main">
+      <a href="/" class="topbar__mark" aria-label="Elwann Guillemot, home">EG</a
+      >
+      <span class="topbar__meta">Back-end Developer</span>
+      <span class="topbar__meta">Lyon, France</span>
+      <ul class="topbar__nav">
+        <li><a href="#today">Today</a></li>
+        <li><a href="#work">Work</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
 
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Today</h3>
-        <p class="text-muted-foreground">
-          I spent my fourth year abroad at the <a
-            href="https://www.hanze.nl/en"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Hanze University of Applied Sciences</a
-          > in Groningen, Netherlands. Now I'm back at <a
-            href="https://www.aktislab.fr/"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Aktislab</a
-          > in Lyon, France, for my final year. Most of my time goes into building
-          tools that make my life, and anyone else's, a little easier and more enjoyable. Things that feel
-          fast and leave room for the <span class="text-foreground"
-            >person using them</span
-          >.
-        </p>
-      </section>
+    <h1 class="hero__name">
+      <span class="sr-only">Elwann Guillemot</span>
+      {
+        nameLines.map(({ width, chars }) => (
+          <span class="hero__line fit-box" aria-hidden="true">
+            <span class="fit" data-fit style={`--n: ${width}`}>
+              {chars.map(({ char, i }) => (
+                <span class="char" style={`--i: ${i}`}>
+                  {char}
+                </span>
+              ))}
+            </span>
+          </span>
+        ))
+      }
+    </h1>
 
-      <section id="projects" class="py-12">
-        <h3 class="mb-6 text-lg font-medium">
-          Some of my projects <span
-            class="text-xs font-normal text-muted-foreground"
-            >(the most interesting ones imo!)</span
-          >
-        </h3>
-        <ProjectShowcase
-          projects={projects.map((p) => ({
-            slug: p.id,
-            title: p.data.title,
-            description: p.data.description,
-            tags: p.data.tags,
-            images: p.data.images,
-            accentColor: p.data.accentColor ?? "var(--primary)",
-            year: p.data.year,
-            isNew: p.data.isNew,
-          }))}
-          client:load
-        />
-      </section>
-
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Contact</h3>
-        <p class="mb-4 text-muted-foreground">
-          Feel free to reach out if you're looking to collaborate on a project,
-          have a job opportunity, or just want to connect.
-        </p>
-        <p class="mb-4 text-muted-foreground">
-          <a
-            href="https://github.com/elwqnn"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">@elwqnn</a
-          >
-          on github
-        </p>
-        <p class="mb-4 text-muted-foreground">
-          email me at
-          <a
-            href="mailto:elwann.guillemot@epitech.eu"
-            class="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors duration-200 hover:text-primary"
-          >
-            elwann.guillemot@epitech.eu
-            <ExternalLinkIcon size={16} />
-          </a>
-        </p>
-        <p class="text-muted-foreground">
-          or check out my <a
-            href="/documents/elwann_guillemot_resume.pdf"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            >resume</a
-          >.
-        </p>
-      </section>
+    <div class="spin" aria-hidden="true">
+      <svg viewBox="0 0 200 200">
+        <defs>
+          <path
+            id="spin-path"
+            d="M100,100 m-76,0 a76,76 0 1,1 152,0 a76,76 0 1,1 -152,0"></path>
+        </defs>
+        <circle cx="100" cy="100" r="97"></circle>
+        <g class="spin__ring">
+          <text>
+            <textPath href="#spin-path" textLength="470">
+              Back-end developer ✦ Mostly Rust ✦ Lyon, FR ✦
+            </textPath>
+          </text>
+        </g>
+      </svg>
+      <span class="spin__core">✦</span>
     </div>
+
+    <div class="hero__row">
+      <p class="hero__role">Back-end<br />Developer</p>
+      <p class="hero__blurb">
+        Mostly Rust. Engines, brokers and desktop shells that stay out of your
+        way, and the odd brand identity on the side.
+      </p>
+      <a class="hero__down" href="#work">
+        <span>{pad(projects.length)} projects</span>
+        <Arrow class="arrow--down" />
+      </a>
+    </div>
+  </header>
+
+  <div class="bands">
+    <Marquee items={bandB} class="band band--paper" reverse speed={60} />
+    <Marquee items={allTags} class="band band--ink" speed={48} />
   </div>
+
+  <section
+    id="today"
+    class="today"
+    data-bg={HOME_BG}
+    style={`--section: ${HOME_BG}`}
+  >
+    <h2 class="label"><span>(01)</span> Today</h2>
+    <p class="today__text">
+      I spent my fourth year abroad at the <a
+        href="https://www.hanze.nl/en"
+        target="_blank"
+        rel="noopener noreferrer">Hanze University of Applied Sciences</a
+      > in Groningen, Netherlands. Now I'm back at <a
+        href="https://www.aktislab.fr/"
+        target="_blank"
+        rel="noopener noreferrer">Aktislab</a
+      > in Lyon, France, for my final year. Most of my time goes into building tools
+      that make my life, and anyone else's, a little easier and more enjoyable. Things
+      that feel fast and leave room for the <span class="stamp"
+        >person using them</span
+      >.
+    </p>
+  </section>
+
+  <section
+    id="work"
+    class="work"
+    data-bg={HOME_BG}
+    style={`--section: ${HOME_BG}`}
+    aria-labelledby="work-title"
+  >
+    <p class="label"><span>(02)</span> Selected work</p>
+    <h2 id="work-title" class="work__title fit-box">
+      <span class="fit" data-fit style="--n: 12">Things I built</span>
+    </h2>
+    <div class="work__sub">
+      <p class="work__note">
+        {pad(projects.length)} projects, the most interesting ones imo.
+      </p>
+      <ol class="index">
+        {
+          projects.map((p, i) => (
+            <li>
+              <a
+                href={`#${p.id}`}
+                style={`--dot: ${p.data.accentColor ?? HOME_BG}`}
+              >
+                <span class="index__num">{pad(i + 1)}</span>
+                {p.data.title}
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  {
+    projects.map((p, i) => {
+      const { title, description, tags, images, year, isNew } = p.data
+      const accent = p.data.accentColor ?? HOME_BG
+      const href = `/projects/${p.id}`
+      const cover = images[0] ? cleanSrc(images[0]) : undefined
+      return (
+        <article
+          id={p.id}
+          class:list={["poster", { "poster--flip": i % 2 === 1 }]}
+          data-bg={accent}
+          style={`--section: ${accent}; --rot: ${i % 2 ? 1.4 : -1.4}deg`}
+          aria-labelledby={`${p.id}-title`}
+        >
+          <div class="poster__meta">
+            <span>No. {pad(i + 1)}</span>
+            <span class="poster__rule" />
+            <span>
+              {isNew ? "New, " : ""}
+              {year}
+            </span>
+          </div>
+          <h3 id={`${p.id}-title`} class="poster__title">
+            <a href={href} tabindex="-1">
+              {titleLines(title).map((line) => (
+                <span class="poster__line fit-box">
+                  <span
+                    class="fit"
+                    data-fit
+                    style={`--n: ${line.length}; --cap: 62vh`}
+                  >
+                    {line}
+                  </span>
+                </span>
+              ))}
+            </a>
+          </h3>
+          <div class="poster__body">
+            <div class="poster__card" data-tilt>
+              <a class="tilt" href={href} tabindex="-1">
+                <span class="tilt__frame">
+                  <Cover
+                    src={cover}
+                    title={title}
+                    tags={tags}
+                    accent={accent}
+                  />
+                </span>
+                {isNew && <Sticker class="poster__sticker" />}
+              </a>
+            </div>
+            <div class="poster__info">
+              <span class="poster__num" aria-hidden="true">
+                {pad(i + 1)}
+              </span>
+              <p class="poster__desc">{description}</p>
+              <ul class="chips" aria-label="Stack">
+                {tags.map((tag) => (
+                  <li>{tag}</li>
+                ))}
+              </ul>
+              <a class="cta" href={href}>
+                View project<span class="sr-only">: {title}</span>
+                <Arrow />
+              </a>
+            </div>
+          </div>
+        </article>
+      )
+    })
+  }
+
+  <Contact number="03" />
 </Layout>
