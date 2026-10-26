@@ -1,131 +1,586 @@
 ---
+import type { InferGetStaticPropsType } from "astro"
 import { getCollection, render } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ImageHero, ImageGrid } from "@/components/ImageGallery"
-import { ArrowLeft, ExternalLink, Github } from "@/components/icons"
+import Masthead from "@/components/Masthead.astro"
+import Plate from "@/components/Plate.astro"
+import Lightbox from "@/components/Lightbox.astro"
+import Footer from "@/components/Footer.astro"
+import { media } from "@/components/media"
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects")
-  return projects.map((project) => ({
+  const projects = (await getCollection("projects")).sort(
+    (a, b) => a.data.order - b.data.order
+  )
+  return projects.map((project, i) => ({
     params: { slug: project.id },
-    props: { project },
+    props: {
+      project,
+      no: i + 1,
+      total: projects.length,
+      next: projects[(i + 1) % projects.length],
+    },
   }))
 }
 
-const { project } = Astro.props
+type Props = InferGetStaticPropsType<typeof getStaticPaths>
+
+const { project, no, total, next } = Astro.props
 const { Content } = await render(project)
-const { title, description, tags, images, links, githubUrl, liveUrl, year } =
-  project.data
+const {
+  title,
+  description,
+  tags,
+  images,
+  links,
+  githubUrl,
+  liveUrl,
+  year,
+  accentColor,
+  isNew,
+} = project.data
+
+const pad = (n: number) => String(n).padStart(2, "0")
+const figs = images.map((src) => media(src, project.id))
+const [hero, ...rest] = figs
+
+let landscape = 0
+let large = 0
+let half = 0
+const plates = rest.map((f, i) => {
+  let kind = "bleed"
+  if (!f.wide) {
+    const tall = f.height >= f.width * 0.9
+    if (!tall && landscape++ % 3 === 0)
+      kind = large++ % 2 ? "large large-b" : "large large-a"
+    else kind = half++ % 2 ? "half half-b" : "half half-a"
+  }
+  return { ...f, kind, n: i + 2 }
+})
+
+const allLinks = [
+  ...links,
+  ...(liveUrl ? [{ label: "Live preview", url: liveUrl }] : []),
+  ...(githubUrl ? [{ label: "Source code", url: githubUrl }] : []),
+]
 ---
 
 <Layout
   title={`${title} — Elwann Guillemot`}
   description={description}
-  image={images[0]}
+  image={hero?.src}
 >
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <a
-          href="/#projects"
-          class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-        >
-          <ArrowLeft
-            size={14}
-            className="transition-transform duration-200 group-hover:-translate-x-0.5"
-          />
-          Back to projects
-        </a>
-        <ThemeToggle client:load />
-      </header>
+  <Masthead
+    links={[
+      { href: "/#work", label: "Index" },
+      { href: "/#contact", label: "Contact" },
+    ]}
+  />
 
-      <header class="mb-12">
-        <h1 class="mb-3 text-3xl font-bold">{title}</h1>
-        <p class="mb-6 text-lg text-muted-foreground">{description}</p>
-        <p class="text-xs text-muted-foreground/40">
-          {tags.join(" · ")}
-        </p>
-      </header>
+  <main id="main" style={`--accent: ${accentColor ?? "var(--ink)"}`}>
+    <header class="head">
+      <p class="eyebrow label">
+        <a href="/#work"><span aria-hidden="true">&larr;</span> All work</a>
+        <span>No. {pad(no)} / {pad(total)}</span>
+        <span>{year}</span>
+        {isNew && <span class="new">New</span>}
+      </p>
+      <h1 class="title">{title}</h1>
+      <p class="deck">{description}</p>
+    </header>
 
-      <div class="mb-12">
-        <ImageHero images={images} title={title} client:load />
-      </div>
-
-      <div class="mb-12 grid gap-12 md:grid-cols-3">
-        <div class="col-span-2">
-          <h2 class="mb-4 text-xl font-semibold">About the project</h2>
-          <div
-            class="space-y-4 text-muted-foreground [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors [&_a:hover]:text-primary"
+    {
+      hero ? (
+        <figure class="bleed hero">
+          <button
+            type="button"
+            class="zoom"
+            data-lb
+            data-src={hero.src}
+            data-alt={`${title}, ${hero.caption}`}
+            data-cap={hero.caption}
+            aria-label={`Open ${hero.caption} full size`}
           >
-            <Content />
-          </div>
+            <img
+              src={hero.src}
+              width={hero.width}
+              height={hero.height}
+              alt={`${title}, ${hero.caption}`}
+              fetchpriority="high"
+              decoding="async"
+              class={hero.width < 1000 ? "pixel" : undefined}
+            />
+          </button>
+        </figure>
+      ) : (
+        <div class="bleed band">
+          <Plate
+            title={title}
+            description={description}
+            tags={tags}
+            accent={accentColor}
+          />
         </div>
+      )
+    }
 
-        <div class="space-y-6">
+    <div class="body">
+      <aside class="side" aria-label="Project details">
+        <dl>
           <div>
-            <h3
-              class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase"
-            >
-              Year
-            </h3>
-            <p class="text-sm">{year}</p>
+            <dt class="label">Year</dt>
+            <dd>{year}</dd>
           </div>
-
+          <div>
+            <dt class="label">Stack</dt>
+            <dd>
+              <ul>{tags.map((t) => <li>{t}</li>)}</ul>
+            </dd>
+          </div>
           {
-            (links.length > 0 || liveUrl || githubUrl) && (
+            allLinks.length > 0 && (
               <div>
-                <h3 class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  Links
-                </h3>
-                <div class="space-y-2">
-                  {links.map(({ label, url }) => (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      {label}
-                    </a>
-                  ))}
-                  {liveUrl && (
-                    <a
-                      href={liveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      Live Preview
-                    </a>
-                  )}
-                  {githubUrl && (
-                    <a
-                      href={githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <Github size={14} />
-                      Source Code
-                    </a>
-                  )}
-                </div>
+                <dt class="label">Links</dt>
+                <dd>
+                  <ul>
+                    {allLinks.map(({ label, url }) => (
+                      <li>
+                        <a href={url} target="_blank" rel="noopener noreferrer">
+                          {label} <span aria-hidden="true">&nearr;</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
               </div>
             )
           }
-        </div>
-      </div>
-
-      {
-        images.length > 1 && (
-          <div class="mb-12">
-            <ImageGrid images={images} title={title} client:load />
+          <div>
+            <dt class="label">Figures</dt>
+            <dd>
+              {
+                figs.length > 0
+                  ? pad(figs.length)
+                  : "None, it lives in a terminal"
+              }
+            </dd>
           </div>
-        )
-      }
+        </dl>
+      </aside>
+
+      <article class="prose">
+        <Content />
+      </article>
     </div>
-  </div>
+
+    {
+      plates.length > 0 && (
+        <section class="gallery" aria-label="Figures">
+          {plates.map((f) => (
+            <figure class={f.kind}>
+              <button
+                type="button"
+                class="zoom"
+                data-lb
+                data-src={f.src}
+                data-alt={`${title}, ${f.caption}`}
+                data-cap={f.caption}
+                aria-label={`Open ${f.caption} full size`}
+              >
+                <img
+                  src={f.src}
+                  width={f.width}
+                  height={f.height}
+                  alt={`${title}, ${f.caption}`}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </button>
+              <figcaption>
+                <span>Fig. {pad(f.n)}</span>
+                {f.caption}
+              </figcaption>
+            </figure>
+          ))}
+        </section>
+      )
+    }
+
+    <nav class="next" aria-label="Next project">
+      <a
+        href={`/projects/${next.id}`}
+        style={`--next: ${next.data.accentColor ?? "var(--ink)"}`}
+      >
+        <span class="label">Next project</span>
+        <span class="next-title"
+          >{next.data.title} <span aria-hidden="true">&rarr;</span></span
+        >
+        <span class="next-line">{next.data.description}</span>
+      </a>
+    </nav>
+  </main>
+
+  <Footer />
+  <Lightbox />
 </Layout>
+
+<style>
+  .head {
+    padding: clamp(3rem, 8vw, 7rem) var(--gutter) clamp(2.5rem, 6vw, 5rem);
+  }
+
+  .eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.75rem;
+    margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .eyebrow a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .eyebrow a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+
+  .new {
+    padding: 0.25rem 0.5rem 0.2rem;
+    border: 1px solid var(--ink);
+    border-radius: 99px;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 0.625rem;
+    line-height: 1;
+  }
+
+  .title {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(3.5rem, 0.8rem + 10.5vw, 12.5rem);
+    line-height: 0.88;
+    letter-spacing: -0.035em;
+    margin-left: -0.05em;
+    text-wrap: balance;
+    animation: rise 1.2s var(--ease-out) backwards;
+  }
+
+  .deck {
+    max-width: 22em;
+    margin-top: clamp(1.25rem, 2.5vw, 2rem);
+    margin-left: calc(
+      (100% - 11 * var(--col-gap)) / 12 * 3 + 3 * var(--col-gap)
+    );
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 340;
+    font-size: var(--text-deck);
+    line-height: 1.2;
+    color: var(--ink-soft);
+    text-wrap: balance;
+    animation: rise 1.2s 0.15s var(--ease-out) backwards;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      filter: blur(10px);
+    }
+  }
+
+  .bleed {
+    width: 100%;
+  }
+
+  .hero img {
+    width: 100%;
+    max-height: 92svh;
+    object-fit: cover;
+  }
+
+  .band {
+    aspect-ratio: 21 / 9;
+    max-height: 80svh;
+  }
+
+  .zoom {
+    display: block;
+    width: 100%;
+    cursor: zoom-in;
+  }
+
+  .zoom img {
+    width: 100%;
+  }
+
+  .zoom:focus-visible {
+    outline-offset: -4px;
+    outline-color: var(--paper);
+    box-shadow: 0 0 0 4px var(--ink);
+  }
+
+  .body {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    padding: clamp(3.5rem, 8vw, 7.5rem) var(--gutter) clamp(4rem, 9vw, 8rem);
+  }
+
+  .side {
+    grid-column: 1 / span 3;
+    align-self: start;
+    position: sticky;
+    top: 2rem;
+  }
+
+  dl {
+    display: grid;
+    gap: 1.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  dt {
+    margin-bottom: 0.4rem;
+  }
+
+  dd {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  dd ul {
+    list-style: none;
+  }
+
+  dd a {
+    text-decoration-line: underline;
+    text-decoration-color: var(--rule-strong);
+    text-underline-offset: 0.2em;
+    transition: text-decoration-color 0.3s var(--ease-out);
+  }
+
+  dd a:hover {
+    text-decoration-color: var(--accent);
+  }
+
+  .prose {
+    grid-column: 5 / span 7;
+    max-width: 36em;
+    font-family: var(--serif);
+    font-size: var(--text-body);
+    font-weight: 370;
+    line-height: 1.55;
+    text-wrap: pretty;
+    hanging-punctuation: first;
+  }
+
+  .prose :global(p + p) {
+    margin-top: 1em;
+  }
+
+  .prose :global(p:first-child) {
+    font-size: 1.32em;
+    line-height: 1.32;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.4em;
+  }
+
+  .prose :global(p:first-child::first-letter) {
+    -webkit-initial-letter: 2;
+    initial-letter: 2;
+    margin-right: 0.1em;
+    font-weight: 300;
+  }
+
+  .prose :global(a) {
+    text-decoration-line: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.16em;
+    text-decoration-color: var(--accent);
+    transition: text-decoration-thickness 0.3s var(--ease-out);
+  }
+
+  .prose :global(a:hover) {
+    text-decoration-thickness: 0.14em;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    row-gap: clamp(3rem, 7vw, 7rem);
+    padding: 0 var(--gutter) clamp(5rem, 11vw, 10rem);
+  }
+
+  .gallery .bleed {
+    grid-column: 1 / -1;
+    width: auto;
+    margin-inline: calc(var(--gutter) * -1);
+  }
+
+  .gallery .bleed figcaption {
+    padding-inline: var(--gutter);
+  }
+
+  .large-a {
+    grid-column: 1 / span 9;
+  }
+
+  .large-b {
+    grid-column: 4 / span 9;
+  }
+
+  .half-a {
+    grid-column: 1 / span 6;
+  }
+
+  .half-b {
+    grid-column: 7 / span 6;
+    margin-top: clamp(3rem, 8vw, 8rem);
+  }
+
+  .gallery img,
+  .hero img {
+    background: var(--paper-deep);
+    outline: 1px solid color-mix(in srgb, var(--ink) 7%, transparent);
+    outline-offset: -1px;
+  }
+
+  figcaption {
+    display: flex;
+    gap: 1rem;
+    padding-top: 0.75rem;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--ink-soft);
+  }
+
+  figcaption span {
+    font-family: var(--sans);
+    font-style: normal;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding-top: 0.2em;
+    color: var(--ink);
+  }
+
+  .next {
+    border-top: 1px solid var(--rule);
+    margin-inline: var(--gutter);
+  }
+
+  .next a {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    padding: 1.25rem 0 clamp(4rem, 9vw, 8rem);
+    text-decoration: none;
+  }
+
+  .next .label {
+    grid-column: 1 / span 3;
+  }
+
+  .next-title {
+    grid-column: 4 / -1;
+    margin-top: clamp(1rem, 3vw, 2rem);
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(3rem, 1rem + 7vw, 8.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    text-decoration-line: underline;
+    text-decoration-thickness: 0.035em;
+    text-underline-offset: 0.1em;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 0.5s var(--ease-out);
+  }
+
+  .next-title span {
+    display: inline-block;
+    transition: translate 0.6s var(--ease-out);
+  }
+
+  .next a:hover .next-title {
+    text-decoration-color: var(--next);
+  }
+
+  .next a:hover .next-title span {
+    translate: 0.15em 0;
+  }
+
+  .next-line {
+    grid-column: 4 / -1;
+    margin-top: 1rem;
+    font-size: 0.9375rem;
+    color: var(--ink-soft);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .gallery .zoom {
+        overflow: hidden;
+      }
+
+      .gallery img {
+        animation: settle linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 50%;
+      }
+
+      @keyframes settle {
+        from {
+          scale: 1.12;
+          opacity: 0.2;
+        }
+        to {
+          scale: 1;
+          opacity: 1;
+        }
+      }
+    }
+  }
+
+  @media (max-width: 47.99rem) {
+    .deck {
+      margin-left: 0;
+    }
+
+    .band {
+      aspect-ratio: 4 / 3;
+    }
+
+    .side,
+    .prose,
+    .large-a,
+    .large-b,
+    .half-a,
+    .half-b,
+    .next .label,
+    .next-title,
+    .next-line {
+      grid-column: 1 / -1;
+    }
+
+    .side {
+      position: static;
+      order: 2;
+      margin-top: 3.5rem;
+    }
+
+    dl {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .half-b {
+      margin-top: 0;
+    }
+  }
+</style>

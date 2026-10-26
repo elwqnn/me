@@ -1,0 +1,184 @@
+<dialog class="lb" aria-label="Image viewer">
+  <div class="lb-stage">
+    <img class="lb-img" alt="" />
+  </div>
+  <div class="lb-bar">
+    <p class="lb-cap">
+      <span class="lb-count"></span>
+      <span class="lb-text"></span>
+    </p>
+    <a class="lb-raw" target="_blank" rel="noopener"
+      >Open original <span aria-hidden="true">&nearr;</span></a
+    >
+    <div class="lb-nav">
+      <button type="button" class="lb-prev">Previous</button>
+      <button type="button" class="lb-next">Next</button>
+    </div>
+  </div>
+  <button type="button" class="lb-close" autofocus>Close</button>
+</dialog>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>(".lb")
+  const triggers = [
+    ...document.querySelectorAll<HTMLButtonElement>("[data-lb]"),
+  ]
+
+  if (dialog && triggers.length) {
+    const img = dialog.querySelector<HTMLImageElement>(".lb-img")!
+    const count = dialog.querySelector<HTMLElement>(".lb-count")!
+    const text = dialog.querySelector<HTMLElement>(".lb-text")!
+    const raw = dialog.querySelector<HTMLAnchorElement>(".lb-raw")!
+    const prev = dialog.querySelector<HTMLButtonElement>(".lb-prev")!
+    const next = dialog.querySelector<HTMLButtonElement>(".lb-next")!
+    const pad = (n: number) => String(n).padStart(2, "0")
+    let index = 0
+    let opener: HTMLElement | null = null
+
+    const go = (i: number) => {
+      index = (i + triggers.length) % triggers.length
+      const t = triggers[index]
+      img.src = t.dataset.src ?? ""
+      img.alt = t.dataset.alt ?? ""
+      count.textContent = `${pad(index + 1)} / ${pad(triggers.length)}`
+      text.textContent = t.dataset.cap ?? ""
+      raw.href = t.dataset.src ?? ""
+    }
+
+    const single = triggers.length < 2
+    prev.hidden = single
+    next.hidden = single
+
+    triggers.forEach((t, i) =>
+      t.addEventListener("click", () => {
+        opener = t
+        go(i)
+        dialog.showModal()
+      })
+    )
+
+    prev.addEventListener("click", () => go(index - 1))
+    next.addEventListener("click", () => go(index + 1))
+    dialog
+      .querySelector(".lb-close")!
+      .addEventListener("click", () => dialog.close())
+
+    dialog.addEventListener("click", (e) => {
+      const el = e.target as HTMLElement
+      if (el === dialog || el.classList.contains("lb-stage")) dialog.close()
+    })
+
+    dialog.addEventListener("keydown", (e) => {
+      if (single) return
+      if (e.key === "ArrowLeft") go(index - 1)
+      if (e.key === "ArrowRight") go(index + 1)
+    })
+
+    dialog.addEventListener("close", () => opener?.focus())
+  }
+</script>
+
+<style>
+  .lb {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border: 0;
+    padding: 0;
+    color: var(--ink);
+    background: var(--paper);
+    opacity: 0;
+    transition:
+      opacity 0.35s var(--ease-out),
+      overlay 0.35s allow-discrete,
+      display 0.35s allow-discrete;
+  }
+
+  .lb[open] {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    opacity: 1;
+  }
+
+  @starting-style {
+    .lb[open] {
+      opacity: 0;
+    }
+  }
+
+  .lb::backdrop {
+    background: transparent;
+  }
+
+  .lb-stage {
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    padding: clamp(3.5rem, 6vw, 5rem) var(--gutter) 1rem;
+  }
+
+  .lb-img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    box-shadow: 0 30px 80px -40px
+      color-mix(in srgb, var(--ink) 45%, transparent);
+  }
+
+  .lb-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem 1.5rem;
+    padding: 1rem var(--gutter) 1.5rem;
+    font-size: var(--text-sm);
+    border-top: 1px solid var(--rule);
+  }
+
+  .lb-cap {
+    flex: 1;
+    min-width: 12rem;
+  }
+
+  .lb-count {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+    margin-right: 0.75rem;
+  }
+
+  .lb-text {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1.0625rem;
+  }
+
+  .lb-nav {
+    display: flex;
+    gap: 1.25rem;
+  }
+
+  .lb-raw,
+  .lb-nav button,
+  .lb-close {
+    text-decoration: none;
+    font-size: var(--text-sm);
+  }
+
+  .lb-raw:hover,
+  .lb-nav button:hover,
+  .lb-close:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .lb-close {
+    position: absolute;
+    top: 1.25rem;
+    right: var(--gutter);
+  }
+</style>

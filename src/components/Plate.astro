@@ -1,0 +1,69 @@
+---
+interface Props {
+  title: string
+  description?: string
+  tags: string[]
+  accent?: string
+}
+
+const { title, description, tags, accent = "#d6cfc1" } = Astro.props
+---
+
+<div
+  class="plate"
+  style={`--plate: ${accent}`}
+  role="img"
+  aria-label={description ? `${title}: ${description}` : title}
+>
+  <span class="plate-tags">{tags.join(" / ")}</span>
+  <span class="plate-title">{title}</span>
+  {description && <span class="plate-desc">{description}</span>}
+</div>
+
+<style>
+  .plate {
+    container-type: size;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: clamp(0.875rem, 5cqi, 2.5rem);
+    color: var(--ink);
+    background:
+      repeating-conic-gradient(
+        from 90deg at 0% 62%,
+        color-mix(in srgb, var(--ink) 16%, transparent) 0deg 0.18deg,
+        transparent 0.18deg 4.5deg
+      ),
+      var(--plate);
+    overflow: hidden;
+  }
+
+  .plate-tags {
+    font-family: var(--sans);
+    font-size: clamp(0.625rem, 2.6cqi, 0.875rem);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .plate-title {
+    align-self: end;
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 380;
+    font-size: min(30cqi, 42cqb);
+    line-height: 0.8;
+    letter-spacing: -0.03em;
+    margin-left: -0.04em;
+  }
+
+  .plate-desc {
+    margin-top: clamp(0.5rem, 3cqi, 1.5rem);
+    max-width: 26ch;
+    font-family: var(--serif);
+    font-size: clamp(0.8125rem, 4.4cqi, 1.75rem);
+    line-height: 1.15;
+  }
+</style>

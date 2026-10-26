@@ -1,0 +1,119 @@
+---
+interface Props {
+  links: { href: string; label: string }[]
+}
+
+const { links } = Astro.props
+const home = Astro.url.pathname === "/"
+---
+
+<header class="mast">
+  <a href="/" class="mast-name" aria-current={home ? "page" : undefined}>
+    Elwann Guillemot
+  </a>
+  <span class="mast-role">Back-end Developer</span>
+  <span class="mast-place">Lyon, France</span>
+  <nav aria-label="Primary">
+    <ul>
+      {
+        links.map(({ href, label }) => (
+          <li>
+            <a href={href}>{label}</a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</header>
+
+<style>
+  .mast {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap, 1.5rem);
+    align-items: baseline;
+    padding: 1.375rem var(--gutter);
+    font-size: var(--text-sm);
+    line-height: 1.3;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  .mast-name {
+    grid-column: 1 / span 3;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+
+  .mast-role {
+    grid-column: 4 / span 3;
+    color: var(--ink-soft);
+  }
+
+  .mast-place {
+    grid-column: 7 / span 3;
+    color: var(--ink-soft);
+  }
+
+  nav {
+    grid-column: 10 / -1;
+    justify-self: end;
+  }
+
+  ul {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+  }
+
+  nav a {
+    position: relative;
+  }
+
+  nav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.2em;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.5s var(--ease-out);
+  }
+
+  nav a:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  @media (max-width: 47.99rem) {
+    .mast {
+      grid-template-columns: 1fr auto;
+      row-gap: 0.125rem;
+    }
+
+    .mast-name,
+    .mast-role {
+      grid-column: 1;
+    }
+
+    .mast-place {
+      display: none;
+    }
+
+    nav {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+
+    ul {
+      gap: 1rem;
+    }
+  }
+</style>

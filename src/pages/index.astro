@@ -1,107 +1,464 @@
 ---
 import { getCollection } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ProjectShowcase } from "@/components/ProjectShowcase"
-import { ExternalLinkIcon } from "@/components/icons"
+import Masthead from "@/components/Masthead.astro"
+import Hero from "@/components/Hero.astro"
+import Plate from "@/components/Plate.astro"
+import Footer from "@/components/Footer.astro"
+import { media } from "@/components/media"
 
 const projects = (await getCollection("projects")).sort(
   (a, b) => a.data.order - b.data.order
 )
+
+const cards = projects.map((p, i) => ({
+  p,
+  no: String(i + 1).padStart(2, "0"),
+  cover: p.data.images[0] ? media(p.data.images[0], p.id) : null,
+}))
+
+const years = projects.map((p) => Number(p.data.year))
+const span = `${Math.min(...years)}–${Math.max(...years)}`
 ---
 
 <Layout>
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <div class="flex flex-col">
-          <a
-            href="/"
-            class="text-sm font-medium transition-colors duration-200 hover:text-primary"
-          >
-            Elwann Guillemot
-          </a>
-          <span class="text-sm text-muted-foreground">Back-end Developer</span>
-        </div>
-        <ThemeToggle client:load />
+  <Masthead
+    links={[
+      { href: "#work", label: "Work" },
+      { href: "#today", label: "Today" },
+      { href: "#contact", label: "Contact" },
+    ]}
+  />
+
+  <main id="main">
+    <Hero projects={projects} />
+
+    <section id="today" class="today" aria-labelledby="today-title">
+      <h2 id="today-title" class="label">Today</h2>
+      <p class="today-text">
+        I spent my fourth year abroad at the <a
+          href="https://www.hanze.nl/en"
+          class="prose-link"
+          target="_blank"
+          rel="noopener noreferrer">Hanze University of Applied Sciences</a
+        > in Groningen, Netherlands. Now I'm back at <a
+          href="https://www.aktislab.fr/"
+          class="prose-link"
+          target="_blank"
+          rel="noopener noreferrer">Aktislab</a
+        > in Lyon, France, for my final year. Most of my time goes into building tools
+        that make my life, and anyone else's, a little easier and more enjoyable.
+        Things that feel fast and leave room for the <em>person using them</em>.
+      </p>
+    </section>
+
+    <section id="work" class="work" aria-labelledby="work-title">
+      <header class="work-head">
+        <h2 id="work-title" class="work-title">Selected work</h2>
+        <p class="label">
+          {String(projects.length).padStart(2, "0")} projects, {span}
+        </p>
       </header>
 
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Today</h3>
-        <p class="text-muted-foreground">
-          I spent my fourth year abroad at the <a
-            href="https://www.hanze.nl/en"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Hanze University of Applied Sciences</a
-          > in Groningen, Netherlands. Now I'm back at <a
-            href="https://www.aktislab.fr/"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Aktislab</a
-          > in Lyon, France, for my final year. Most of my time goes into building
-          tools that make my life, and anyone else's, a little easier and more enjoyable. Things that feel
-          fast and leave room for the <span class="text-foreground"
-            >person using them</span
-          >.
-        </p>
-      </section>
+      <ol class="work-grid">
+        {
+          cards.map(({ p, no, cover }) => (
+            <li
+              class="card"
+              style={`--accent: ${p.data.accentColor ?? "var(--ink)"}`}
+            >
+              <a href={`/projects/${p.id}`} class="card-link">
+                <div class="card-frame">
+                  {cover ? (
+                    <img
+                      src={cover.src}
+                      width={cover.width}
+                      height={cover.height}
+                      alt={`${p.data.title}, cover image`}
+                      loading="lazy"
+                      decoding="async"
+                      class={cover.width < 1000 ? "pixel" : undefined}
+                    />
+                  ) : (
+                    <Plate
+                      title={p.data.title}
+                      tags={p.data.tags}
+                      accent={p.data.accentColor}
+                    />
+                  )}
+                </div>
+                <div class="card-meta">
+                  <span class="card-no" aria-hidden="true">
+                    {no}
+                  </span>
+                  <h3 class="card-title">{p.data.title}</h3>
+                  <span class="card-year">
+                    {p.data.isNew && <span class="card-new">New</span>}
+                    {p.data.year}
+                  </span>
+                  <p class="card-line">{p.data.description}</p>
+                </div>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </section>
 
-      <section id="projects" class="py-12">
-        <h3 class="mb-6 text-lg font-medium">
-          Some of my projects <span
-            class="text-xs font-normal text-muted-foreground"
-            >(the most interesting ones imo!)</span
-          >
-        </h3>
-        <ProjectShowcase
-          projects={projects.map((p) => ({
-            slug: p.id,
-            title: p.data.title,
-            description: p.data.description,
-            tags: p.data.tags,
-            images: p.data.images,
-            accentColor: p.data.accentColor ?? "var(--primary)",
-            year: p.data.year,
-            isNew: p.data.isNew,
-          }))}
-          client:load
-        />
-      </section>
+    <section id="contact" class="contact" aria-labelledby="contact-title">
+      <h2 id="contact-title" class="label">Contact</h2>
+      <p class="contact-intro">
+        Feel free to reach out if you're looking to collaborate on a project,
+        have a job opportunity, or just want to connect.
+      </p>
+      <p class="contact-line">
+        Email me at <a href="mailto:elwann.guillemot@epitech.eu"
+          >elwann.guillemot@<wbr />epitech.eu</a
+        >, find me on GitHub as <a
+          href="https://github.com/elwqnn"
+          target="_blank"
+          rel="noopener noreferrer">@elwqnn</a
+        >, or read my <a href="/documents/elwann_guillemot_resume.pdf">resume</a
+        >.
+      </p>
+    </section>
+  </main>
 
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Contact</h3>
-        <p class="mb-4 text-muted-foreground">
-          Feel free to reach out if you're looking to collaborate on a project,
-          have a job opportunity, or just want to connect.
-        </p>
-        <p class="mb-4 text-muted-foreground">
-          <a
-            href="https://github.com/elwqnn"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">@elwqnn</a
-          >
-          on github
-        </p>
-        <p class="mb-4 text-muted-foreground">
-          email me at
-          <a
-            href="mailto:elwann.guillemot@epitech.eu"
-            class="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors duration-200 hover:text-primary"
-          >
-            elwann.guillemot@epitech.eu
-            <ExternalLinkIcon size={16} />
-          </a>
-        </p>
-        <p class="text-muted-foreground">
-          or check out my <a
-            href="/documents/elwann_guillemot_resume.pdf"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            >resume</a
-          >.
-        </p>
-      </section>
-    </div>
-  </div>
+  <Footer />
 </Layout>
+
+<style>
+  .today,
+  .contact,
+  .work-head {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    padding-inline: var(--gutter);
+  }
+
+  .today {
+    padding-bottom: clamp(6rem, 13vw, 12rem);
+  }
+
+  .today h2 {
+    grid-column: 1 / span 3;
+    padding-top: 0.6em;
+  }
+
+  .today-text {
+    grid-column: 4 / span 7;
+    font-family: var(--serif);
+    font-size: var(--text-deck);
+    font-weight: 360;
+    line-height: 1.32;
+    letter-spacing: -0.008em;
+    text-wrap: pretty;
+  }
+
+  .today-text em {
+    font-style: italic;
+  }
+
+  .work {
+    padding-bottom: clamp(6rem, 14vw, 13rem);
+  }
+
+  .work-head {
+    align-items: end;
+    padding-top: 1.25rem;
+    padding-bottom: clamp(2.5rem, 6vw, 5rem);
+    border-top: 1px solid var(--rule);
+    margin-inline: var(--gutter);
+    padding-inline: 0;
+  }
+
+  .work-title {
+    grid-column: 1 / span 9;
+    font-family: var(--serif);
+    font-weight: 300;
+    font-style: italic;
+    font-size: clamp(2.5rem, 1.2rem + 4.2vw, 5.5rem);
+    line-height: 1;
+    letter-spacing: -0.025em;
+  }
+
+  .work-head .label {
+    grid-column: 10 / -1;
+    justify-self: end;
+    padding-bottom: 0.6em;
+  }
+
+  .work-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    row-gap: clamp(4rem, 8vw, 8rem);
+    padding-inline: var(--gutter);
+    list-style: none;
+  }
+
+  .card-link {
+    display: block;
+    text-decoration: none;
+  }
+
+  .card-frame {
+    position: relative;
+    aspect-ratio: var(--ratio, 4 / 3);
+    overflow: hidden;
+    background: var(--paper-deep);
+  }
+
+  .card-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 1.4s var(--ease-out);
+  }
+
+  .card-link:hover .card-frame img {
+    transform: scale(1.035);
+  }
+
+  .card-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
+    pointer-events: none;
+  }
+
+  .card-meta {
+    display: grid;
+    grid-template-columns: 2.25rem 1fr auto;
+    column-gap: 0.75rem;
+    align-items: baseline;
+    padding-top: 1rem;
+  }
+
+  .card-no {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .card-no::before {
+    content: "";
+    width: 0.45rem;
+    height: 0.45rem;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  .card-title {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.625rem, 1.15rem + 1.1vw, 2.375rem);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    text-decoration-line: underline;
+    text-decoration-thickness: 0.05em;
+    text-underline-offset: 0.14em;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 0.45s var(--ease-out);
+  }
+
+  .card-link:hover .card-title,
+  .card-link:focus-visible .card-title {
+    text-decoration-color: var(--accent);
+  }
+
+  .card-year {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+  }
+
+  .card-new {
+    padding: 0.2rem 0.45rem 0.18rem;
+    border: 1px solid var(--ink);
+    border-radius: 99px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .card-line {
+    grid-column: 2 / -1;
+    margin-top: 0.35rem;
+    font-size: 0.9375rem;
+    color: var(--ink-soft);
+    text-wrap: pretty;
+  }
+
+  @media (min-width: 60rem) {
+    .card:nth-child(6n + 1) {
+      grid-column: 1 / span 7;
+      --ratio: 16 / 10;
+    }
+
+    .card:nth-child(6n + 2) {
+      grid-column: 9 / span 4;
+      margin-top: clamp(6rem, 14vw, 13rem);
+      --ratio: 4 / 3;
+    }
+
+    .card:nth-child(6n + 3) {
+      grid-column: 2 / span 6;
+      --ratio: 3 / 2;
+    }
+
+    .card:nth-child(6n + 4) {
+      grid-column: 9 / span 4;
+      margin-top: clamp(4rem, 9vw, 9rem);
+      --ratio: 4 / 5;
+    }
+
+    .card:nth-child(6n + 5) {
+      grid-column: 1 / span 4;
+      margin-top: clamp(3rem, 6vw, 6rem);
+      --ratio: 1 / 1;
+    }
+
+    .card:nth-child(6n + 6) {
+      grid-column: 6 / span 7;
+      --ratio: 16 / 10;
+    }
+  }
+
+  @media (min-width: 40rem) and (max-width: 59.99rem) {
+    .card {
+      grid-column: span 6;
+    }
+
+    .card:nth-child(even) {
+      margin-top: 5rem;
+    }
+  }
+
+  @media (max-width: 39.99rem) {
+    .card {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .card-frame {
+        animation: unveil linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 90%;
+      }
+
+      .card-frame img {
+        animation: settle linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 55%;
+      }
+
+      @keyframes unveil {
+        from {
+          clip-path: inset(14% 0 0 0);
+        }
+        to {
+          clip-path: inset(0 0 0 0);
+        }
+      }
+
+      @keyframes settle {
+        from {
+          scale: 1.16;
+        }
+        to {
+          scale: 1;
+        }
+      }
+    }
+  }
+
+  .contact {
+    padding-bottom: clamp(5rem, 11vw, 10rem);
+  }
+
+  .contact h2 {
+    grid-column: 1 / span 3;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .contact-intro {
+    grid-column: 4 / span 4;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.9375rem;
+    color: var(--ink-soft);
+    text-wrap: pretty;
+  }
+
+  .contact-line {
+    grid-column: 4 / -1;
+    margin-top: clamp(2rem, 4vw, 3.5rem);
+    font-family: var(--serif);
+    font-weight: 330;
+    font-size: clamp(2rem, 0.9rem + 3.6vw, 4.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    text-wrap: pretty;
+    overflow-wrap: anywhere;
+  }
+
+  .contact-line a {
+    white-space: nowrap;
+    text-decoration-line: underline;
+    text-decoration-thickness: 0.045em;
+    text-underline-offset: 0.12em;
+    text-decoration-color: var(--rule-strong);
+    transition: text-decoration-color 0.4s var(--ease-out);
+  }
+
+  .contact-line a:hover {
+    text-decoration-color: var(--ink);
+  }
+
+  @media (max-width: 47.99rem) {
+    .today h2,
+    .today-text,
+    .contact h2,
+    .contact-intro,
+    .contact-line,
+    .work-title,
+    .work-head .label {
+      grid-column: 1 / -1;
+    }
+
+    .contact-line a {
+      white-space: normal;
+    }
+
+    .today h2 {
+      padding-top: 0;
+      margin-bottom: 1rem;
+    }
+
+    .contact-intro {
+      border-top: 0;
+      padding-top: 1rem;
+    }
+
+    .work-head .label {
+      justify-self: start;
+      padding-top: 0.75rem;
+    }
+  }
+</style>

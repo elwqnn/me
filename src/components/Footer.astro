@@ -1,0 +1,56 @@
+---
+const year = new Date().getFullYear()
+---
+
+<footer class="foot">
+  <span>&copy; {year} Elwann Guillemot</span>
+  <span class="foot-set">Set in Newsreader and Geist</span>
+  <a href="#top">Back to top <span aria-hidden="true">&uarr;</span></a>
+</footer>
+
+<style>
+  .foot {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    padding: 1.5rem var(--gutter) 2rem;
+    border-top: 1px solid var(--rule);
+    font-size: var(--text-sm);
+    color: var(--ink-soft);
+  }
+
+  span:first-child {
+    grid-column: 1 / span 3;
+  }
+
+  .foot-set {
+    grid-column: 4 / span 6;
+  }
+
+  a {
+    grid-column: 10 / -1;
+    justify-self: end;
+    text-decoration: none;
+    color: var(--ink);
+  }
+
+  a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  @media (max-width: 47.99rem) {
+    .foot {
+      grid-template-columns: 1fr auto;
+    }
+
+    .foot-set {
+      display: none;
+    }
+
+    span:first-child,
+    a {
+      grid-column: auto;
+    }
+  }
+</style>
