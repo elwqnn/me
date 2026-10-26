@@ -47,7 +47,7 @@ const pile = images.slice(1).map((src, k) => ({
   wide: isWide(src),
   style: `left:calc(${Math.round((jitter() - 0.5) * 70)}px * var(--jit));top:${Math.round((jitter() - 0.5) * 40)}px;z-index:${Math.round(jitter() * 4)}`,
   width: `${Math.round(82 + jitter() * 18)}%`,
-  rotate: +((jitter() - 0.5) * 12).toFixed(1),
+  rotate: +((jitter() - 0.5) * (isWide(src) ? 4 : 12)).toFixed(1),
   speed: +((jitter() - 0.5) * 0.08).toFixed(3),
 }))
 const allLinks = [
@@ -137,7 +137,7 @@ const now = new Date().getFullYear()
             <dd>{year}</dd>
           </div>
           <div>
-            <dt class="mono">Stack</dt>
+            <dt class="mono">Tags</dt>
             <dd>{tags.join(", ")}</dd>
           </div>
           {
@@ -221,8 +221,12 @@ const now = new Date().getFullYear()
 
 <style>
   .desk {
-    --cover-w: clamp(200px, calc(50vw - var(--sheet-w) / 2 + 8px), 380px);
-    --stamp-w: clamp(190px, calc(50vw - var(--sheet-w) / 2 - 40px), 260px);
+    --cover-w: clamp(180px, calc(50vw - var(--sheet-w) / 2 - 8px), 380px);
+    --stamp-w: clamp(
+      150px,
+      calc(50vw - var(--sheet-w) / 2 - 40px - 56px),
+      260px
+    );
     padding-top: 128px;
   }
 
@@ -403,7 +407,7 @@ const now = new Date().getFullYear()
   }
 
   .pile-wrap {
-    width: min(1180px, 100% - 48px);
+    width: min(1180px, 100% - 120px);
     margin: 120px auto 0;
   }
 
@@ -527,6 +531,14 @@ const now = new Date().getFullYear()
       padding-top: 56px;
     }
 
+    .pile-wrap {
+      width: min(1180px, 100% - 48px);
+    }
+
+    .pile {
+      --jit: 0.2;
+    }
+
     .head :global(.cover),
     .head :global(.stamp-cover) {
       position: relative;
@@ -556,7 +568,6 @@ const now = new Date().getFullYear()
     }
 
     .pile {
-      --jit: 0.2;
       columns: 2 130px;
       column-gap: 18px;
     }

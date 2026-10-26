@@ -6,7 +6,7 @@ import Scrap from "@/components/Scrap.astro"
 import Stamp from "@/components/Stamp.astro"
 import Tear from "@/components/Tear.astro"
 import Label from "@/components/Label.astro"
-import { pad } from "@/components/paper"
+import { clean, pad, size } from "@/components/paper"
 
 const projects = (await getCollection("projects")).sort(
   (a, b) => a.data.order - b.data.order
@@ -25,10 +25,22 @@ type Slot = {
   over?: boolean
 }
 
+const margin = "(50vw - var(--sheet-w) / 2)"
+const share = (gap: number) => +(gap / 380).toFixed(3)
+const aspect = (src?: string) => {
+  const d = src ? size(src) : undefined
+  return d ? d.height / d.width : 1.25
+}
 const place = (s: Slot, edge: string) =>
-  `${s.side === "l" ? "right" : "left"}:calc(${edge} + ${s.gap}px);top:${s.y}px`
-const fit = (s: Slot) =>
-  `min(${s.w}px, calc(50vw - var(--sheet-w) / 2 - ${Math.max(s.gap, 0) + 20}px))`
+  `${s.side === "l" ? "right" : "left"}:calc(${edge} + ${s.gap < 0 ? `${s.gap}px` : `${margin} * ${share(s.gap)}`});top:${s.y}px`
+const fit = (s: Slot, src?: string, sticker = false) => {
+  const a = Math.abs((s.r * Math.PI) / 180)
+  const k = 1 / (1 + (aspect(src) * Math.sin(a) + Math.cos(a) - 1) / 2)
+  const safe = 24 + (sticker && s.side === "r" ? 16 : 0)
+  return `min(${s.w}px, calc((${margin} * ${1 - share(Math.max(s.gap, 0))} - ${safe}px) * ${k.toFixed(3)}))`
+}
+const still = (images: string[]) =>
+  images.slice(1).find((src) => !clean(src).endsWith(".gif"))
 
 const heroSlots: (Slot & { slug: string; i: number })[] = [
   {
@@ -49,7 +61,7 @@ const heroSlots: (Slot & { slug: string; i: number })[] = [
     i: 3,
     side: "r",
     gap: -44,
-    y: -6,
+    y: 40,
     w: 204,
     r: 6,
     speed: 0.3,
@@ -217,12 +229,12 @@ const now = new Date().getFullYear()
             src={s.src}
             alt={`${s.p.data.title} visual`}
             href={`/projects/${s.p.id}`}
-            width={fit(s)}
+            width={fit(s, s.src)}
             rotate={s.r}
             speed={s.speed}
             look={s.look}
             tape={s.tape}
-            eager
+            eager={k < 3}
             style={place(s, "50% + var(--sheet-w) / 2")}
           />
         ))
@@ -300,7 +312,8 @@ const now = new Date().getFullYear()
               const slot = workSlots[i % workSlots.length]
               const { title, description, tags, images, year, isNew } = p.data
               const accent = p.data.accentColor ?? "var(--orange)"
-              const second = slot.second && images[1] ? slot.second : undefined
+              const secondSrc = still(images)
+              const second = slot.second && secondSrc ? slot.second : undefined
               return (
                 <li class="work lift" style={`--accent:${accent}`}>
                   <a class="work-link" href={`/projects/${p.id}`}>
@@ -326,7 +339,7 @@ const now = new Date().getFullYear()
                       src={images[0]}
                       alt={`${title} cover`}
                       href={`/projects/${p.id}`}
-                      width={fit(slot)}
+                      width={fit(slot, images[0], isNew)}
                       rotate={slot.r}
                       speed={slot.speed}
                       look={slot.look}
@@ -344,7 +357,7 @@ const now = new Date().getFullYear()
                       ]}
                       seed={`${p.id}-stamp`}
                       href={`/projects/${p.id}`}
-                      width={fit(slot)}
+                      width={fit(slot, undefined, isNew)}
                       rotate={slot.r}
                       speed={slot.speed}
                       isNew={isNew}
@@ -371,10 +384,10 @@ const now = new Date().getFullYear()
                     <Scrap
                       class:list={["work-scrap", "second", second.side]}
                       seed={`${p.id}-second`}
-                      src={images[1]}
+                      src={secondSrc}
                       alt={`${title} visual`}
                       href={`/projects/${p.id}`}
-                      width={fit(second)}
+                      width={fit(second, secondSrc)}
                       rotate={second.r}
                       speed={second.speed}
                       look={second.look}
@@ -469,6 +482,12 @@ const now = new Date().getFullYear()
 
   @media (max-width: 1359px), (hover: none), (pointer: coarse) {
     .note {
+      display: none;
+    }
+  }
+
+  @media (max-width: 1299px) {
+    .hero-scraps :global(.hs-6) {
       display: none;
     }
   }

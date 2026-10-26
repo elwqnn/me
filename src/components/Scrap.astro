@@ -324,6 +324,7 @@ const Tag = href ? "a" : index !== undefined ? "button" : "div"
     el.addEventListener("pointerdown", (e) => {
       if (!fine.matches || e.button !== 0) return
       e.preventDefault()
+      el.setPointerCapture(e.pointerId)
       const ox = e.clientX - s.dx
       const oy = e.clientY - s.dy
       let last = e.clientX
@@ -336,7 +337,6 @@ const Tag = href ? "a" : index !== undefined ? "button" : "div"
         if (!moved) {
           if (Math.hypot(dx - s.dx, dy - s.dy) < 5) return
           moved = true
-          el.setPointerCapture(e.pointerId)
           el.classList.add("is-dragging")
         }
         const tilt = Math.max(-9, Math.min(9, (e.clientX - last) * 0.7))
@@ -356,6 +356,7 @@ const Tag = href ? "a" : index !== undefined ? "button" : "div"
         el.removeEventListener("pointermove", move)
         el.removeEventListener("pointerup", up)
         el.removeEventListener("pointercancel", up)
+        el.removeEventListener("lostpointercapture", up)
         el.classList.remove("is-dragging")
         el.style.removeProperty("--tilt")
         if (!moved) return
@@ -366,6 +367,7 @@ const Tag = href ? "a" : index !== undefined ? "button" : "div"
       el.addEventListener("pointermove", move)
       el.addEventListener("pointerup", up)
       el.addEventListener("pointercancel", up)
+      el.addEventListener("lostpointercapture", up)
     })
   }
 
