@@ -150,7 +150,6 @@ const n = projects.length
     position: sticky;
     top: 0;
     height: 100svh;
-    min-height: 560px;
     overflow: clip;
     display: grid;
     grid-template-rows: var(--header) minmax(0, 1fr) auto auto;
@@ -508,6 +507,52 @@ const n = projects.length
 
     .meta-title {
       font-size: 12px;
+    }
+  }
+
+  @media (max-height: 560px) {
+    .work {
+      --w: min(27vw, 42svh);
+      --r: calc(var(--w) * 1.4);
+      --step: 70svh;
+    }
+
+    .stage {
+      grid-template-rows: 56px minmax(0, 1fr) auto auto;
+    }
+
+    .ring,
+    .floor {
+      top: 46%;
+    }
+
+    .caption {
+      gap: 2px;
+    }
+
+    .caption-desc {
+      font-size: 13px;
+    }
+
+    .controls {
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+      padding: 8px var(--gutter) 10px;
+    }
+
+    .where {
+      order: 0;
+      text-align: left;
+    }
+
+    .hint {
+      display: none;
+    }
+
+    .step {
+      width: 26px;
+      height: 26px;
     }
   }
 

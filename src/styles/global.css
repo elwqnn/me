@@ -159,6 +159,17 @@ button {
   background: var(--accent, var(--paper));
 }
 
+main:focus {
+  outline: none;
+}
+
+.still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .media {
   position: relative;
   display: block;
@@ -226,5 +237,17 @@ button {
   from {
     opacity: 0;
     transform: translateY(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  img[data-gif] {
+    visibility: hidden;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

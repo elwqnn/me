@@ -50,7 +50,12 @@ const allLinks = [
   description={description}
   image={cover && clean(cover)}
 >
-  <main class="project" data-project={slug} style={`--accent:${accent}`}>
+  <main
+    class="project"
+    tabindex="-1"
+    data-project={slug}
+    style={`--accent:${accent}`}
+  >
     <nav class="crumbs mono" aria-label="Breadcrumb">
       <a href="/" class="back"><span aria-hidden="true">←</span> Index</a>
       <span>Project {pad(index + 1)} / {pad(total)}</span>
@@ -151,6 +156,7 @@ const allLinks = [
                     alt={describe(src, title, slug)}
                     loading="lazy"
                     decoding="async"
+                    data-gif={clean(src).endsWith(".gif") ? "" : undefined}
                   />
                 </button>
                 <figcaption class="mono">Fig. {pad(i + 2)}</figcaption>
@@ -392,6 +398,7 @@ const allLinks = [
   }
 
   .fig button {
+    position: relative;
     display: block;
     width: 100%;
     overflow: hidden;

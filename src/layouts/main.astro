@@ -96,18 +96,31 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 
 <script>
   import { claimCover, mountOrbit, preset, remember } from "@/components/orbit"
-  import { mountLightbox } from "@/components/lightbox"
+  import { freezeGifs, mountLightbox } from "@/components/lightbox"
 
   let stops: (() => void)[] = []
+  let swapped = false
+
+  const traversed = () =>
+    (
+      performance.getEntriesByType("navigation")[0] as
+        | PerformanceNavigationTiming
+        | undefined
+    )?.type === "back_forward"
 
   const boot = () => {
     const project = document.querySelector<HTMLElement>("[data-project]")
     if (project) remember(project.dataset.project!)
-    for (const mount of [mountOrbit, mountLightbox]) {
-      const stop = mount()
+    for (const stop of [mountOrbit(swapped || traversed()), mountLightbox()])
       if (stop) stops.push(stop)
-    }
+    freezeGifs()
+    if (swapped) document.querySelector("main")?.focus({ preventScroll: true })
+    swapped = false
   }
+
+  document.addEventListener("astro:after-swap", () => {
+    swapped = true
+  })
 
   document.addEventListener("astro:before-preparation", (e) => {
     const source = e.sourceElement as Element | undefined

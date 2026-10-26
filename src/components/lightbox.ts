@@ -67,3 +67,24 @@ export function mountLightbox() {
     if (dialog.open) dialog.close()
   }
 }
+
+export function freezeGifs() {
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) return
+  document
+    .querySelectorAll<HTMLImageElement>("img[data-gif]:not([data-frozen])")
+    .forEach((img) => {
+      img.dataset.frozen = ""
+      const draw = () => {
+        const canvas = document.createElement("canvas")
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        canvas.getContext("2d")?.drawImage(img, 0, 0)
+        canvas.className = "still"
+        canvas.setAttribute("role", "img")
+        canvas.setAttribute("aria-label", img.alt)
+        img.after(canvas)
+      }
+      if (img.complete && img.naturalWidth) draw()
+      else img.addEventListener("load", draw, { once: true })
+    })
+}

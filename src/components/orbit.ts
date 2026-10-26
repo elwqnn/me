@@ -58,7 +58,7 @@ export function preset(doc: Document) {
   return true
 }
 
-export function mountOrbit() {
+export function mountOrbit(restore: boolean) {
   const orbit = document.querySelector<HTMLElement>("[data-orbit]")
   if (!orbit || orbit.dataset.ready !== undefined) return
   orbit.dataset.ready = ""
@@ -82,11 +82,10 @@ export function mountOrbit() {
     return k + s * s * (3 - 2 * s)
   }
 
-  const start = Math.max(
-    0,
-    cards.findIndex((c) => c.dataset.slug === recall())
-  )
-  let offset = start - Math.round(base())
+  const start = restore
+    ? cards.findIndex((c) => c.dataset.slug === recall())
+    : -1
+  let offset = start < 0 ? 0 : start - Math.round(base())
   let target = base() + offset
   let current = target
   let front = -1
@@ -148,6 +147,7 @@ export function mountOrbit() {
   }
 
   const step = (d: number) => {
+    pending = null
     offset = Math.round(offset) + d
     go()
     if (document.activeElement?.closest("[data-card]"))
@@ -193,6 +193,7 @@ export function mountOrbit() {
       if (!drag.moved && Math.abs(dx) < 6) return
       if (!drag.moved) {
         drag.moved = true
+        pending = null
         orbit.classList.add("is-dragging")
       }
       const dt = Math.max(1, e.timeStamp - drag.t)
@@ -254,7 +255,9 @@ export function mountOrbit() {
     (e) => {
       if (drag.active) return
       const card = (e.target as Element).closest<HTMLElement>("[data-card]")
-      if (card) toIndex(cards.indexOf(card))
+      if (!card) return
+      pending = null
+      toIndex(cards.indexOf(card))
     },
     { signal }
   )
@@ -281,6 +284,7 @@ export function mountOrbit() {
     (e) => {
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
       e.preventDefault()
+      pending = null
       offset += e.deltaX / span()
       go()
       clearTimeout(wheelTimer)
