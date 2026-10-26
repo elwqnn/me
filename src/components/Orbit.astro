@@ -1,0 +1,538 @@
+---
+import Cover from "./Cover.astro"
+import { pad } from "./images"
+
+interface Props {
+  projects: {
+    slug: string
+    title: string
+    description: string
+    tags: string[]
+    cover?: string
+    accent: string
+    year: string
+    isNew: boolean
+  }[]
+}
+
+const { projects } = Astro.props
+const n = projects.length
+---
+
+<section
+  id="work"
+  class="work"
+  data-orbit
+  style={`--n:${n}`}
+  aria-labelledby="work-title"
+>
+  <div class="stage" data-stage>
+    <div class="scene">
+      <div class="floor" aria-hidden="true"></div>
+      <ol class="ring">
+        {
+          projects.map((p, i) => (
+            <li
+              class="card"
+              style={`--i:${i};--accent:${p.accent}`}
+              data-card
+              data-slug={p.slug}
+            >
+              <a
+                class="face front"
+                href={`/projects/${p.slug}`}
+                draggable="false"
+                aria-label={`${p.title}, ${p.year}${p.isNew ? ", new" : ""}. ${p.description}`}
+              >
+                <span
+                  class:list={["media", { "vt-cover": i === 0 }]}
+                  data-media
+                >
+                  <Cover
+                    src={p.cover}
+                    slug={p.slug}
+                    title={p.title}
+                    accent={p.accent}
+                    eager
+                  />
+                  {p.isNew && <span class="pill new">New</span>}
+                </span>
+                <span class="meta">
+                  <span class="meta-title">{p.title}</span>
+                  <span class="mono">{p.year}</span>
+                </span>
+              </a>
+              <div class="face back" aria-hidden="true">
+                <span class="mono">N° {pad(i + 1)}</span>
+                <svg class="mark" viewBox="0 0 40 40">
+                  <circle cx="20" cy="20" r="10" />
+                  <path d="M20 4v32M4 20h32" />
+                </svg>
+                <span class="back-title">{p.title}</span>
+                <span class="mono">{p.year}</span>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <div class="captions" aria-hidden="true">
+      {
+        projects.map((p, i) => (
+          <div class:list={["caption", { "is-front": i === 0 }]} data-caption>
+            <p class="caption-desc">{p.description}</p>
+            <p class="mono caption-tags">{p.tags.join("  ·  ")}</p>
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="controls">
+      <div class="where">
+        <h2 id="work-title" class="label">Selected work</h2>
+        <p class="mono hint">
+          <span class="hint-pointer"
+            >Scroll, drag or press ← → to turn the ring</span
+          >
+          <span class="hint-touch">Scroll or swipe to turn the ring</span>
+          <span class="hint-still">Drag or use the arrows to turn the ring</span
+          >
+        </p>
+      </div>
+      <div class="dial">
+        <button
+          type="button"
+          class="step"
+          data-step="-1"
+          aria-label="Previous project">←</button
+        >
+        <div class="map" aria-hidden="true">
+          {
+            projects.map((p, i) => (
+              <span
+                class:list={["dot", { "is-front": i === 0 }]}
+                style={`--i:${i};--accent:${p.accent}`}
+                data-dot
+              />
+            ))
+          }
+        </div>
+        <p class="mono count">
+          <span class="sr-only">Project</span>
+          <span data-count>01</span><span class="of"> / {pad(n)}</span>
+        </p>
+        <button
+          type="button"
+          class="step"
+          data-step="1"
+          aria-label="Next project">→</button
+        >
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .work {
+    --w: clamp(212px, 27vw, 420px);
+    --pad: calc(var(--w) * 0.024 + 4px);
+    --mh: calc((var(--w) - 2 * var(--pad)) * 0.75);
+    --h: calc(var(--mh) + var(--pad) + 34px);
+    --r: calc(var(--w) * 1.5);
+    --tilt: -9deg;
+    --step: 55svh;
+    position: relative;
+    height: calc(100svh + (var(--n) - 1) * var(--step));
+  }
+
+  .stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    min-height: 560px;
+    overflow: clip;
+    display: grid;
+    grid-template-rows: var(--header) minmax(0, 1fr) auto auto;
+    background:
+      radial-gradient(
+        ellipse 58% 52% at 50% 44%,
+        var(--bg-hi) 0%,
+        rgb(240 240 237 / 0) 100%
+      ),
+      var(--bg);
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+  }
+
+  .work.is-dragging .stage {
+    cursor: grabbing;
+  }
+
+  .scene {
+    grid-row: 2;
+    position: relative;
+    perspective: calc(var(--w) * 4.4);
+    perspective-origin: 50% 30%;
+  }
+
+  .ring {
+    position: absolute;
+    left: 50%;
+    top: 47%;
+    width: 0;
+    height: 0;
+    transform-style: preserve-3d;
+    transform: translateZ(calc(var(--r) * -1)) rotateX(var(--tilt));
+  }
+
+  .floor {
+    position: absolute;
+    left: 50%;
+    top: 47%;
+    width: calc(var(--r) * 2.3);
+    height: calc(var(--w) * 0.36);
+    translate: -50% calc(var(--h) * 0.42);
+    background: radial-gradient(
+      closest-side,
+      rgb(23 23 22 / 0.16),
+      rgb(23 23 22 / 0.05) 60%,
+      rgb(23 23 22 / 0)
+    );
+  }
+
+  .card {
+    --a: calc((var(--i) - var(--rot, 0)) * 360deg / var(--n));
+    --c: cos(var(--a));
+    position: absolute;
+    left: calc(var(--w) / -2);
+    top: calc(var(--h) / -2);
+    width: var(--w);
+    height: var(--h);
+    transform-style: preserve-3d;
+    transform: rotateY(var(--a)) translateZ(var(--r));
+  }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: var(--pad) var(--pad) 0;
+    border-radius: 6px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 0.5),
+      0 1px 1px rgb(23 23 22 / 0.06),
+      0 24px 40px -24px rgb(23 23 22 / 0.4);
+  }
+
+  .face::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: #2a2a26;
+    pointer-events: none;
+  }
+
+  .front {
+    background: var(--paper);
+    -webkit-user-drag: none;
+  }
+
+  .front::after {
+    opacity: calc((1 - var(--c)) * 0.2);
+  }
+
+  .back {
+    transform: rotateY(180deg);
+    display: grid;
+    grid-template: 1fr auto / 1fr auto;
+    padding: calc(var(--pad) + 6px) calc(var(--pad) + 8px);
+    background: #ebebe7;
+    color: var(--ink-2);
+  }
+
+  .back::after {
+    opacity: calc((1 + var(--c)) * 0.2);
+  }
+
+  .back .mark {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: 30px;
+    translate: -50% -50%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 0.8;
+    opacity: 0.5;
+  }
+
+  .back-title {
+    grid-row: 2;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .back .mono:last-child {
+    grid-row: 2;
+    align-self: end;
+  }
+
+  .media {
+    height: var(--mh);
+    flex: none;
+    border-radius: 3px;
+  }
+
+  .new {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+  }
+
+  .meta {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 2px;
+    opacity: clamp(0, (var(--c) - 0.84) * 7, 1);
+  }
+
+  .meta-title {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+
+  .meta .mono {
+    color: var(--muted);
+  }
+
+  .front:focus-visible {
+    outline-offset: 5px;
+    border-radius: 6px;
+  }
+
+  .captions {
+    grid-row: 3;
+    display: grid;
+    justify-items: center;
+    padding: 0 var(--gutter);
+    text-align: center;
+  }
+
+  .caption {
+    grid-area: 1 / 1;
+    display: grid;
+    gap: 6px;
+    max-width: 44ch;
+    opacity: 0;
+    translate: 0 6px;
+    transition:
+      opacity 0.25s,
+      translate 0.25s;
+  }
+
+  .caption.is-front {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 0.5s 0.08s,
+      translate 0.6s 0.08s var(--ease-out);
+  }
+
+  .caption-desc {
+    font-size: 15px;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .caption-tags {
+    color: var(--muted);
+    white-space: pre-wrap;
+  }
+
+  .controls {
+    grid-row: 4;
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px var(--gutter) 22px;
+  }
+
+  .where {
+    display: grid;
+    gap: 4px;
+  }
+
+  .hint {
+    color: var(--muted);
+  }
+
+  .hint-touch,
+  .hint-still {
+    display: none;
+  }
+
+  .dial {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: default;
+  }
+
+  .step {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    font-size: 13px;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      border-color 0.2s;
+  }
+
+  .step:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+
+  .map {
+    position: relative;
+    width: 64px;
+    height: 24px;
+  }
+
+  .map::before {
+    content: "";
+    position: absolute;
+    inset: 2px 2px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+  }
+
+  .dot {
+    --a: calc((var(--i) - var(--rot, 0)) * 360deg / var(--n));
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    margin: -2.5px;
+    border-radius: 50%;
+    background: var(--ink);
+    opacity: calc(0.3 + (cos(var(--a)) + 1) * 0.35);
+    translate: calc(sin(var(--a)) * 30px) calc(cos(var(--a)) * 10px);
+    transition:
+      scale 0.3s var(--ease-out),
+      background 0.3s;
+  }
+
+  .dot.is-front {
+    background: var(--accent);
+    scale: 1.7;
+    box-shadow: 0 0 0 0.6px var(--ink);
+  }
+
+  .count {
+    min-width: 7ch;
+  }
+
+  .of {
+    color: var(--muted);
+  }
+
+  @media (hover: none) {
+    .stage {
+      cursor: auto;
+    }
+
+    .hint-pointer {
+      display: none;
+    }
+
+    .hint-touch {
+      display: inline;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .work {
+      --w: min(62vw, 260px);
+      --r: calc(var(--w) * 1.1);
+      --tilt: -10deg;
+      --step: 45svh;
+    }
+
+    .scene {
+      perspective-origin: 50% 40%;
+    }
+
+    .ring,
+    .floor {
+      top: 50%;
+    }
+
+    .caption-desc {
+      font-size: 14px;
+    }
+
+    .controls {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+      padding-top: 22px;
+    }
+
+    .where {
+      order: 2;
+      text-align: center;
+    }
+
+    .dial {
+      justify-content: center;
+    }
+
+    .meta-title {
+      font-size: 12px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .work {
+      height: auto;
+    }
+
+    .stage {
+      position: relative;
+    }
+
+    .caption,
+    .caption.is-front,
+    .dot {
+      transition: none;
+    }
+
+    .hint-pointer,
+    .hint-touch {
+      display: none;
+    }
+
+    .hint-still {
+      display: inline;
+    }
+  }
+</style>

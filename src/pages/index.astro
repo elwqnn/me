@@ -1,9 +1,7 @@
 ---
 import { getCollection } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ProjectShowcase } from "@/components/ProjectShowcase"
-import { ExternalLinkIcon } from "@/components/icons"
+import Orbit from "@/components/Orbit.astro"
 
 const projects = (await getCollection("projects")).sort(
   (a, b) => a.data.order - b.data.order
@@ -11,97 +9,201 @@ const projects = (await getCollection("projects")).sort(
 ---
 
 <Layout>
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <div class="flex flex-col">
-          <a
-            href="/"
-            class="text-sm font-medium transition-colors duration-200 hover:text-primary"
-          >
-            Elwann Guillemot
-          </a>
-          <span class="text-sm text-muted-foreground">Back-end Developer</span>
-        </div>
-        <ThemeToggle client:load />
-      </header>
+  <main>
+    <h1 class="sr-only">Elwann Guillemot, Back-end Developer</h1>
 
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Today</h3>
-        <p class="text-muted-foreground">
-          I spent my fourth year abroad at the <a
-            href="https://www.hanze.nl/en"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Hanze University of Applied Sciences</a
-          > in Groningen, Netherlands. Now I'm back at <a
-            href="https://www.aktislab.fr/"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Aktislab</a
-          > in Lyon, France, for my final year. Most of my time goes into building
-          tools that make my life, and anyone else's, a little easier and more enjoyable. Things that feel
-          fast and leave room for the <span class="text-foreground"
-            >person using them</span
-          >.
-        </p>
-      </section>
+    <Orbit
+      projects={projects.map((p) => ({
+        slug: p.id,
+        title: p.data.title,
+        description: p.data.description,
+        tags: p.data.tags,
+        cover: p.data.images[0],
+        accent: p.data.accentColor ?? "#9a9a94",
+        year: p.data.year,
+        isNew: p.data.isNew,
+      }))}
+    />
 
-      <section id="projects" class="py-12">
-        <h3 class="mb-6 text-lg font-medium">
-          Some of my projects <span
-            class="text-xs font-normal text-muted-foreground"
-            >(the most interesting ones imo!)</span
-          >
-        </h3>
-        <ProjectShowcase
-          projects={projects.map((p) => ({
-            slug: p.id,
-            title: p.data.title,
-            description: p.data.description,
-            tags: p.data.tags,
-            images: p.data.images,
-            accentColor: p.data.accentColor ?? "var(--primary)",
-            year: p.data.year,
-            isNew: p.data.isNew,
-          }))}
-          client:load
-        />
-      </section>
+    <section id="today" class="block" aria-labelledby="today-title">
+      <h2 id="today-title" class="label">Today</h2>
+      <p class="today">
+        I spent my fourth year abroad at the <a
+          href="https://www.hanze.nl/en"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer">Hanze University of Applied Sciences</a
+        > in Groningen, Netherlands. Now I'm back at <a
+          href="https://www.aktislab.fr/"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer">Aktislab</a
+        > in Lyon, France, for my final year. Most of my time goes into building tools
+        that make my life, and anyone else's, a little easier and more enjoyable.
+        Things that feel fast and leave room for the <em>person using them</em>.
+      </p>
+    </section>
 
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Contact</h3>
-        <p class="mb-4 text-muted-foreground">
+    <section id="contact" class="block" aria-labelledby="contact-title">
+      <h2 id="contact-title" class="label">Contact</h2>
+      <div class="contact">
+        <p class="lede">
           Feel free to reach out if you're looking to collaborate on a project,
           have a job opportunity, or just want to connect.
         </p>
-        <p class="mb-4 text-muted-foreground">
-          <a
-            href="https://github.com/elwqnn"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">@elwqnn</a
-          >
-          on github
-        </p>
-        <p class="mb-4 text-muted-foreground">
-          email me at
-          <a
-            href="mailto:elwann.guillemot@epitech.eu"
-            class="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors duration-200 hover:text-primary"
-          >
-            elwann.guillemot@epitech.eu
-            <ExternalLinkIcon size={16} />
-          </a>
-        </p>
-        <p class="text-muted-foreground">
-          or check out my <a
-            href="/documents/elwann_guillemot_resume.pdf"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            >resume</a
-          >.
-        </p>
-      </section>
-    </div>
-  </div>
+        <ul class="rows">
+          <li>
+            <a
+              href="https://github.com/elwqnn"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span class="mono">GitHub</span>
+              <span class="value">@elwqnn</span>
+              <span class="arrow" aria-hidden="true">↗</span>
+            </a>
+          </li>
+          <li>
+            <a href="mailto:elwann.guillemot@epitech.eu">
+              <span class="mono">Email</span>
+              <span class="value">elwann.guillemot@epitech.eu</span>
+              <span class="arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="/documents/elwann_guillemot_resume.pdf"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="mono">Resume</span>
+              <span class="value">Check out my resume (PDF)</span>
+              <span class="arrow" aria-hidden="true">↗</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
 </Layout>
+
+<style>
+  .block {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 24px;
+    row-gap: 20px;
+    padding: clamp(72px, 12vw, 160px) var(--gutter);
+    scroll-margin-top: 0;
+  }
+
+  .block + .block {
+    padding-top: 0;
+  }
+
+  .block .label {
+    grid-column: 1 / span 3;
+    padding-top: 6px;
+  }
+
+  .today,
+  .contact {
+    grid-column: 4 / span 7;
+  }
+
+  .today {
+    font-size: clamp(19px, 1.9vw, 26px);
+    line-height: 1.38;
+    letter-spacing: -0.018em;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+
+  .today a,
+  .today em {
+    color: var(--ink);
+  }
+
+  .today em {
+    font-style: normal;
+  }
+
+  .contact {
+    display: grid;
+    gap: 36px;
+  }
+
+  .lede {
+    max-width: 46ch;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .rows {
+    border-top: 1px solid var(--line-strong);
+  }
+
+  .rows a {
+    display: grid;
+    grid-template-columns: 9ch minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 16px;
+    padding: 18px 2px;
+    border-bottom: 1px solid var(--line-strong);
+    transition: padding 0.35s var(--ease-out);
+  }
+
+  .rows .mono {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .value {
+    font-size: clamp(17px, 1.6vw, 22px);
+    letter-spacing: -0.015em;
+    overflow-wrap: anywhere;
+  }
+
+  .arrow {
+    transition: translate 0.35s var(--ease-out);
+  }
+
+  .rows a:hover {
+    padding-inline: 10px;
+  }
+
+  .rows a:hover .arrow {
+    translate: 3px -2px;
+  }
+
+  @media (max-width: 720px) {
+    .block {
+      grid-template-columns: minmax(0, 1fr);
+      padding-block: 72px;
+    }
+
+    .block .label,
+    .today,
+    .contact {
+      grid-column: 1;
+    }
+
+    .rows a {
+      grid-template-columns: minmax(0, 1fr) auto;
+      row-gap: 4px;
+    }
+
+    .rows .mono {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rows a,
+    .arrow {
+      transition: none;
+    }
+  }
+</style>

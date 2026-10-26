@@ -1,5 +1,8 @@
 ---
+import "@fontsource-variable/geist"
+import "@fontsource-variable/geist-mono"
 import "@/styles/global.css"
+import { ClientRouter } from "astro:transitions"
 
 interface Props {
   title?: string
@@ -20,6 +23,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#e4e4e0" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href={canonicalURL} />
@@ -60,19 +64,173 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
       })}
     />
 
-    <script is:inline>
-      const theme = localStorage.getItem("theme") ?? "system"
-      const isDark =
-        theme === "dark" ||
-        (theme === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      if (isDark) document.documentElement.classList.add("dark")
-    </script>
+    <ClientRouter />
   </head>
-  <body>
-    <div class="relative isolate min-h-screen">
-      <slot />
-      <div class="noise-overlay" aria-hidden="true"></div>
-    </div>
+  <body id="top">
+    <header class="site-header">
+      <a href="/" class="id">
+        <span class="name">Elwann Guillemot</span>
+        <span class="role">Back-end Developer</span>
+      </a>
+      <p class="status mono">
+        <span class="beacon" aria-hidden="true"></span>Now at Aktislab, Lyon
+      </p>
+      <nav aria-label="Main">
+        <a href="/#work">Work</a>
+        <a href="/#today">Today</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </header>
+
+    <slot />
+
+    <footer class="site-footer mono">
+      <span>© {new Date().getFullYear()} Elwann Guillemot</span>
+      <span class="set">Set in Geist &amp; Geist Mono</span>
+      <a href="#top" class="link">Back to top ↑</a>
+    </footer>
+
+    <div class="grain" aria-hidden="true"></div>
   </body>
 </html>
+
+<script>
+  import { claimCover, mountOrbit, preset, remember } from "@/components/orbit"
+  import { mountLightbox } from "@/components/lightbox"
+
+  let stops: (() => void)[] = []
+
+  const boot = () => {
+    const project = document.querySelector<HTMLElement>("[data-project]")
+    if (project) remember(project.dataset.project!)
+    for (const mount of [mountOrbit, mountLightbox]) {
+      const stop = mount()
+      if (stop) stops.push(stop)
+    }
+  }
+
+  document.addEventListener("astro:before-preparation", (e) => {
+    const source = e.sourceElement as Element | undefined
+    claimCover(source?.querySelector?.("[data-media]"))
+  })
+
+  document.addEventListener("astro:before-swap", (e) => {
+    stops.forEach((stop) => stop())
+    stops = []
+    const home = preset(e.newDocument)
+    e.newDocument.documentElement.dataset.morph = home ? "old" : "new"
+  })
+
+  document.addEventListener("astro:page-load", boot)
+  boot()
+</script>
+
+<style>
+  .site-header {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 20;
+    height: var(--header);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: start;
+    gap: 16px;
+    padding: 18px var(--gutter) 0;
+    background: linear-gradient(var(--bg) 72%, rgb(228 228 224 / 0) 100%);
+    view-transition-name: site-header;
+  }
+
+  .id {
+    display: grid;
+    justify-self: start;
+    line-height: 1.35;
+  }
+
+  .name {
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+
+  .role {
+    color: var(--muted);
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 2px;
+    color: var(--muted);
+  }
+
+  .beacon {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3f8f5a;
+    box-shadow: 0 0 0 3px rgb(63 143 90 / 0.18);
+  }
+
+  nav {
+    display: flex;
+    justify-content: end;
+    gap: 18px;
+  }
+
+  nav a {
+    position: relative;
+    padding-bottom: 2px;
+  }
+
+  nav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.35s var(--ease-out);
+  }
+
+  nav a:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  .site-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 28px var(--gutter);
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+  }
+
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0.045;
+    mix-blend-mode: multiply;
+    background: url("/noise.webp") 0 0 / 180px;
+  }
+
+  @media (max-width: 720px) {
+    .site-header {
+      grid-template-columns: 1fr auto;
+    }
+
+    .status,
+    .set {
+      display: none;
+    }
+
+    nav {
+      gap: 14px;
+    }
+  }
+</style>
