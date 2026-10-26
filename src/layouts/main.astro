@@ -19,7 +19,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b0c0a" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href={canonicalURL} />
@@ -59,20 +60,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
         ],
       })}
     />
-
-    <script is:inline>
-      const theme = localStorage.getItem("theme") ?? "system"
-      const isDark =
-        theme === "dark" ||
-        (theme === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      if (isDark) document.documentElement.classList.add("dark")
-    </script>
   </head>
   <body>
-    <div class="relative isolate min-h-screen">
-      <slot />
-      <div class="noise-overlay" aria-hidden="true"></div>
-    </div>
+    <slot />
   </body>
 </html>

@@ -1,107 +1,807 @@
 ---
 import { getCollection } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ProjectShowcase } from "@/components/ProjectShowcase"
-import { ExternalLinkIcon } from "@/components/icons"
+import Surface from "@/components/Surface.astro"
+import Arrow from "@/components/Arrow.astro"
 
-const projects = (await getCollection("projects")).sort(
-  (a, b) => a.data.order - b.data.order
-)
+const projects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((p, i) => ({
+    ...p.data,
+    slug: p.id,
+    n: String(i + 1).padStart(2, "0"),
+    accent: p.data.accentColor ?? "#ece8dc",
+    cover: p.data.images[0]?.replace(/#wide$/, ""),
+  }))
+
+const years = projects.map((p) => Number(p.year))
+const span = `${Math.min(...years)}–${Math.max(...years)}`
 ---
 
 <Layout>
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <div class="flex flex-col">
-          <a
-            href="/"
-            class="text-sm font-medium transition-colors duration-200 hover:text-primary"
-          >
-            Elwann Guillemot
-          </a>
-          <span class="text-sm text-muted-foreground">Back-end Developer</span>
-        </div>
-        <ThemeToggle client:load />
-      </header>
+  <Surface />
 
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Today</h3>
-        <p class="text-muted-foreground">
-          I spent my fourth year abroad at the <a
-            href="https://www.hanze.nl/en"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Hanze University of Applied Sciences</a
-          > in Groningen, Netherlands. Now I'm back at <a
-            href="https://www.aktislab.fr/"
-            class="underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            target="_blank"
-            rel="noopener noreferrer">Aktislab</a
-          > in Lyon, France, for my final year. Most of my time goes into building
-          tools that make my life, and anyone else's, a little easier and more enjoyable. Things that feel
-          fast and leave room for the <span class="text-foreground"
-            >person using them</span
-          >.
-        </p>
-      </section>
+  <header class="top">
+    <a href="/" class="id">
+      <span class="name">Elwann Guillemot</span>
+      <span class="role">Back-end Developer</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#work">Work</a>
+      <a href="#today">Today</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <button type="button" class="seed" data-reseed>
+      <span class="label">Seed</span>
+      <span class="seed-n" data-readout="seed">0000</span>
+      <span class="sr-only">Change the surface pattern</span>
+    </button>
+  </header>
 
-      <section id="projects" class="py-12">
-        <h3 class="mb-6 text-lg font-medium">
-          Some of my projects <span
-            class="text-xs font-normal text-muted-foreground"
-            >(the most interesting ones imo!)</span
-          >
-        </h3>
-        <ProjectShowcase
-          projects={projects.map((p) => ({
-            slug: p.id,
-            title: p.data.title,
-            description: p.data.description,
-            tags: p.data.tags,
-            images: p.data.images,
-            accentColor: p.data.accentColor ?? "var(--primary)",
-            year: p.data.year,
-            isNew: p.data.isNew,
-          }))}
-          client:load
-        />
-      </section>
+  <main>
+    <section id="work" class="hero" aria-labelledby="work-title">
+      <div class="work">
+        <h2 id="work-title" class="label work-head">
+          <span>Selected work</span>
+          <span>{span}</span>
+        </h2>
+        <ol class="list" data-list>
+          {
+            projects.map((p, i) => (
+              <li>
+                <a
+                  href={`/projects/${p.slug}`}
+                  data-index={i}
+                  data-accent={p.accent}
+                  style={`--accent: ${p.accent}`}
+                >
+                  <span class="idx label">{p.n}</span>
+                  <span class="title">{p.title}</span>
+                  <span class="meta label">
+                    <span>{p.year}</span>
+                    {p.isNew && <span class="new">New</span>}
+                  </span>
+                  <span class="desc">{p.description}</span>
+                  <span class="thumb" aria-hidden="true">
+                    {p.cover ? (
+                      <img
+                        src={p.cover}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <span class="gen" />
+                    )}
+                  </span>
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
 
-      <section class="py-12">
-        <h3 class="mb-6 text-lg font-medium">Contact</h3>
-        <p class="mb-4 text-muted-foreground">
-          Feel free to reach out if you're looking to collaborate on a project,
-          have a job opportunity, or just want to connect.
-        </p>
-        <p class="mb-4 text-muted-foreground">
+      <div class="preview" aria-hidden="true">
+        {
+          projects.map((p, i) => (
+            <figure data-index={i} style={`--accent: ${p.accent}`}>
+              <div class="frame">
+                {p.cover ? (
+                  <img
+                    src={p.cover}
+                    alt={`${p.title} cover`}
+                    decoding="async"
+                  />
+                ) : (
+                  <div class="gen-cover">
+                    <span class="gen-word">{p.title}</span>
+                    <span class="label">{p.tags.join(" / ")}</span>
+                  </div>
+                )}
+              </div>
+              <figcaption>
+                <span class="label">
+                  Fig. {p.n} — {p.year}
+                </span>
+                <span class="cap">{p.description}</span>
+                <span class="label tags">{p.tags.join(" · ")}</span>
+              </figcaption>
+            </figure>
+          ))
+        }
+      </div>
+
+      <div class="hint">
+        <span class="label xy" data-readout="xy">x +0.000 y +0.000</span>
+        <span class="label">
+          <span class="on-hover">Click the surface to reseed it</span>
+          <span class="on-touch">Tap the surface to reseed it</span>
+        </span>
+        <a href="#today" class="label down">Scroll <Arrow turn={90} /></a>
+      </div>
+    </section>
+
+    <section id="today" class="today" aria-labelledby="today-title">
+      <h2 id="today-title" class="label">Today</h2>
+      <p class="lede">
+        I spent my fourth year abroad at the <a
+          class="ink"
+          href="https://www.hanze.nl/en"
+          target="_blank"
+          rel="noopener noreferrer">Hanze University of Applied Sciences</a
+        > in Groningen, Netherlands. Now I'm back at <a
+          class="ink"
+          href="https://www.aktislab.fr/"
+          target="_blank"
+          rel="noopener noreferrer">Aktislab</a
+        > in Lyon, France, for my final year. Most of my time goes into building tools
+        that make my life, and anyone else's, a little easier and more enjoyable.
+        Things that feel fast and leave room for the <strong
+          >person using them</strong
+        >.
+      </p>
+    </section>
+
+    <section id="contact" class="contact" aria-labelledby="contact-title">
+      <h2 id="contact-title" class="label">Contact</h2>
+      <p class="intro">
+        Feel free to reach out if you're looking to collaborate on a project,
+        have a job opportunity, or just want to connect.
+      </p>
+      <a class="email" href="mailto:elwann.guillemot@epitech.eu">
+        <span class="label">Email me at</span>
+        <span class="address">elwann.guillemot@epitech.eu</span>
+      </a>
+      <ul class="channels">
+        <li>
+          <span class="label">On GitHub</span>
           <a
             href="https://github.com/elwqnn"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
             target="_blank"
-            rel="noopener noreferrer">@elwqnn</a
+            rel="noopener noreferrer"
           >
-          on github
-        </p>
-        <p class="mb-4 text-muted-foreground">
-          email me at
-          <a
-            href="mailto:elwann.guillemot@epitech.eu"
-            class="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors duration-200 hover:text-primary"
-          >
-            elwann.guillemot@epitech.eu
-            <ExternalLinkIcon size={16} />
+            @elwqnn <Arrow turn={-45} />
           </a>
-        </p>
-        <p class="text-muted-foreground">
-          or check out my <a
-            href="/documents/elwann_guillemot_resume.pdf"
-            class="inline text-foreground underline decoration-muted-foreground/50 underline-offset-2 transition-colors duration-200 hover:text-primary hover:decoration-primary"
-            >resume</a
-          >.
-        </p>
-      </section>
-    </div>
-  </div>
+        </li>
+        <li>
+          <span class="label">Or check out my</span>
+          <a href="/documents/elwann_guillemot_resume.pdf">
+            Resume <span class="label">PDF</span>
+            <Arrow turn={90} />
+          </a>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span class="label">Elwann Guillemot — Back-end Developer</span>
+    <span class="label">
+      Surface seed <span data-readout="seed">0000</span>
+    </span>
+    <a href="#work" class="label">Back to top <Arrow turn={-90} /></a>
+  </footer>
 </Layout>
+
+<style>
+  .top {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: start;
+    padding: 24px var(--gutter);
+    font-size: 0.9375rem;
+    line-height: 1.3;
+  }
+
+  .id {
+    display: flex;
+    flex-direction: column;
+    justify-self: start;
+  }
+
+  .name {
+    font-weight: 620;
+    letter-spacing: -0.01em;
+  }
+
+  .role {
+    color: var(--fg-2);
+  }
+
+  .nav {
+    display: flex;
+    gap: 28px;
+  }
+
+  .nav a {
+    color: var(--fg-2);
+    transition: color 0.3s var(--ease-out);
+  }
+
+  .nav a:hover {
+    color: var(--fg);
+  }
+
+  .seed {
+    justify-self: end;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .seed-n {
+    min-width: 4ch;
+    font-variant-numeric: tabular-nums;
+    font-weight: 520;
+    color: var(--accent);
+    transition: color 0.6s var(--ease-out);
+  }
+
+  .seed:hover .seed-n {
+    text-decoration: underline 1px;
+    text-underline-offset: 0.2em;
+  }
+
+  .hero {
+    position: relative;
+    min-height: 100svh;
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-rows: 1fr auto;
+    column-gap: var(--gutter);
+    row-gap: clamp(28px, 5vh, 56px);
+    padding: clamp(112px, 16vh, 168px) var(--gutter) 20px;
+  }
+
+  .work {
+    align-self: end;
+    min-width: 0;
+  }
+
+  .work-head {
+    display: flex;
+    justify-content: space-between;
+    max-width: 36rem;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .list a {
+    display: grid;
+    grid-template-columns: 3.25rem auto 1fr;
+    align-items: start;
+    padding: 0.04em 0;
+    transition: opacity 0.6s var(--ease-out);
+  }
+
+  .idx {
+    padding-top: 1.55em;
+    transition: color 0.4s var(--ease-out);
+  }
+
+  .title {
+    font-size: clamp(2.25rem, 4.7vw, 5.25rem);
+    line-height: 1.04;
+    font-weight: 320;
+    font-stretch: 88%;
+    letter-spacing: -0.032em;
+    transition:
+      font-weight 0.7s var(--ease-out),
+      font-stretch 0.7s var(--ease-out),
+      letter-spacing 0.7s var(--ease-out);
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 1.45em 0 0 0.9rem;
+    white-space: nowrap;
+  }
+
+  .desc {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .thumb {
+    display: none;
+  }
+
+  .list[data-active] a:not([data-on]) {
+    opacity: 0.34;
+  }
+
+  .list a[data-on] .title {
+    font-weight: 600;
+    font-stretch: 100%;
+    letter-spacing: -0.04em;
+  }
+
+  .list a[data-on] .idx {
+    color: var(--accent);
+  }
+
+  .list a:focus-visible {
+    outline-offset: 2px;
+  }
+
+  .preview {
+    position: relative;
+    min-width: 0;
+    pointer-events: none;
+    container-type: inline-size;
+  }
+
+  figure {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 18px;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.5s var(--ease-out),
+      visibility 0s 0.5s;
+  }
+
+  figure[data-on] {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.35s var(--ease-out);
+  }
+
+  .frame {
+    --c: var(--accent);
+    --l: 11px;
+    align-self: flex-start;
+    max-width: 100%;
+    padding: 12px;
+    background:
+      linear-gradient(var(--c) 0 0) 0 0 / var(--l) 1px,
+      linear-gradient(var(--c) 0 0) 0 0 / 1px var(--l),
+      linear-gradient(var(--c) 0 0) 100% 0 / var(--l) 1px,
+      linear-gradient(var(--c) 0 0) 100% 0 / 1px var(--l),
+      linear-gradient(var(--c) 0 0) 0 100% / var(--l) 1px,
+      linear-gradient(var(--c) 0 0) 0 100% / 1px var(--l),
+      linear-gradient(var(--c) 0 0) 100% 100% / var(--l) 1px,
+      linear-gradient(var(--c) 0 0) 100% 100% / 1px var(--l);
+    background-repeat: no-repeat;
+  }
+
+  .frame > * {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(24px) scale(1.015);
+    transition:
+      clip-path 0.5s var(--ease-in-out),
+      transform 0.6s var(--ease-out);
+  }
+
+  figure[data-on] .frame > * {
+    clip-path: inset(0);
+    transform: none;
+    transition:
+      clip-path 0.9s var(--ease-out),
+      transform 1.1s var(--ease-out);
+  }
+
+  .frame img {
+    width: auto;
+    height: auto;
+    max-width: calc(100cqi - 24px);
+    max-height: min(44vh, 460px);
+  }
+
+  .gen-cover {
+    width: min(calc(100cqi - 24px), 420px);
+    aspect-ratio: 4 / 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 22px 24px;
+    background:
+      repeating-radial-gradient(
+        circle at 74% 70%,
+        transparent 0 15px,
+        color-mix(in oklab, var(--accent) 40%, transparent) 15px 16px
+      ),
+      color-mix(in oklab, var(--accent) 10%, var(--bg));
+  }
+
+  .gen-word {
+    font-size: clamp(3rem, 5.5vw, 5.5rem);
+    font-weight: 700;
+    font-stretch: 75%;
+    line-height: 0.85;
+    letter-spacing: -0.045em;
+    color: var(--accent);
+  }
+
+  .gen-cover .label {
+    color: var(--fg-2);
+  }
+
+  figcaption {
+    display: grid;
+    gap: 8px;
+    max-width: 30rem;
+    padding-left: 12px;
+  }
+
+  figcaption .label:first-child {
+    color: var(--accent);
+  }
+
+  .cap {
+    font-size: 1.0625rem;
+    line-height: 1.35;
+  }
+
+  .hint {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .xy {
+    min-width: 17ch;
+    white-space: pre;
+  }
+
+  .down {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--fg-2);
+  }
+
+  .down:hover :global(.arrow) {
+    translate: 0 3px;
+  }
+
+  .on-touch {
+    display: none;
+  }
+
+  @media (hover: none) {
+    .on-hover,
+    .xy {
+      display: none;
+    }
+
+    .on-touch {
+      display: inline;
+    }
+  }
+
+  .today,
+  .contact {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gutter);
+    padding: 0 var(--gutter);
+  }
+
+  .today {
+    padding-top: clamp(140px, 26vh, 260px);
+    padding-bottom: clamp(120px, 22vh, 220px);
+  }
+
+  .today h2,
+  .contact h2 {
+    grid-column: 1 / span 3;
+    padding-top: 0.75em;
+  }
+
+  .lede {
+    grid-column: 4 / -1;
+    max-width: 22.5em;
+    font-size: clamp(1.5rem, 2.85vw, 2.75rem);
+    line-height: 1.2;
+    font-weight: 330;
+    letter-spacing: -0.022em;
+    text-wrap: pretty;
+    text-shadow: 0 0 32px var(--bg);
+  }
+
+  .lede strong {
+    font-weight: 620;
+    font-stretch: 94%;
+  }
+
+  .contact {
+    padding-bottom: clamp(80px, 14vh, 140px);
+  }
+
+  .intro {
+    grid-column: 4 / span 6;
+    max-width: 31em;
+    padding-top: 0.25em;
+    font-size: 1.1875rem;
+    line-height: 1.45;
+    color: var(--fg-2);
+  }
+
+  .email {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 14px;
+    margin-top: clamp(56px, 11vh, 112px);
+  }
+
+  .address {
+    font-size: clamp(1.45rem, 8.4vw, 8.5rem);
+    line-height: 1;
+    font-weight: 300;
+    font-stretch: 90%;
+    letter-spacing: -0.04em;
+    overflow-wrap: anywhere;
+    transition:
+      font-weight 0.7s var(--ease-out),
+      font-stretch 0.7s var(--ease-out),
+      color 0.4s var(--ease-out);
+  }
+
+  .email:hover .address,
+  .email:focus-visible .address {
+    font-weight: 560;
+    font-stretch: 84%;
+  }
+
+  .channels {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gutter);
+    margin-top: clamp(40px, 7vh, 72px);
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .channels li {
+    grid-column: span 3;
+    display: grid;
+    gap: 8px;
+  }
+
+  .channels a {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: clamp(1.25rem, 1.8vw, 1.625rem);
+    font-weight: 420;
+    letter-spacing: -0.015em;
+  }
+
+  .channels a :global(.arrow) {
+    align-self: center;
+    color: var(--fg-3);
+    transition:
+      translate 0.4s var(--ease-out),
+      color 0.3s var(--ease-out);
+  }
+
+  .channels a:hover :global(.arrow) {
+    color: var(--fg);
+    translate: 2px -2px;
+  }
+
+  .channels a:last-child:hover :global(.arrow) {
+    translate: 0 3px;
+  }
+
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 20px var(--gutter);
+    border-top: 1px solid var(--rule);
+  }
+
+  .foot a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .foot a:hover {
+    color: var(--fg);
+  }
+
+  @media (max-width: 899px) {
+    .top {
+      grid-template-columns: 1fr auto;
+      padding-top: 20px;
+    }
+
+    .nav {
+      display: none;
+    }
+
+    .hero {
+      grid-template-columns: minmax(0, 1fr);
+      padding-top: 132px;
+    }
+
+    .preview {
+      display: none;
+    }
+
+    .list li + li a {
+      border-top: 1px solid var(--rule);
+    }
+
+    .list[data-active] a:not([data-on]) {
+      opacity: 0.62;
+    }
+
+    .list a {
+      grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+      grid-template-areas:
+        "idx title thumb"
+        "idx desc thumb"
+        "idx meta thumb";
+      column-gap: 0;
+      row-gap: 6px;
+      padding: 16px 0;
+    }
+
+    .idx {
+      grid-area: idx;
+      padding-top: 0.7em;
+    }
+
+    .title {
+      grid-area: title;
+      font-size: clamp(1.75rem, 8.2vw, 2.75rem);
+    }
+
+    .desc {
+      grid-area: desc;
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+      font-size: 0.9375rem;
+      line-height: 1.35;
+      color: var(--fg-2);
+    }
+
+    .meta {
+      grid-area: meta;
+      padding: 2px 0 0;
+    }
+
+    .thumb {
+      grid-area: thumb;
+      display: block;
+      width: 72px;
+      height: 72px;
+      margin: 4px 0 0 16px;
+      overflow: hidden;
+      border-radius: 2px;
+      background: color-mix(in oklab, var(--accent) 12%, var(--bg));
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .gen {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: repeating-radial-gradient(
+        circle at 70% 70%,
+        transparent 0 7px,
+        color-mix(in oklab, var(--accent) 55%, transparent) 7px 8px
+      );
+    }
+
+    .hint .label:nth-child(2) {
+      display: none;
+    }
+
+    .today h2,
+    .contact h2,
+    .lede,
+    .intro,
+    .channels li {
+      grid-column: 1 / -1;
+    }
+
+    .lede,
+    .intro {
+      margin-top: 20px;
+    }
+
+    .channels {
+      row-gap: 24px;
+    }
+
+    .foot {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .title,
+    .address,
+    .frame > *,
+    figure[data-on] .frame > * {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  const list = document.querySelector<HTMLElement>("[data-list]")
+  const links = [
+    ...document.querySelectorAll<HTMLAnchorElement>("[data-list] a"),
+  ]
+  const figures = [...document.querySelectorAll<HTMLElement>(".preview figure")]
+  let active = -1
+
+  const show = (i: number) => {
+    if (i === active || !list) return
+    active = i
+    links.forEach((a, j) => a.toggleAttribute("data-on", j === i))
+    figures.forEach((f, j) => f.toggleAttribute("data-on", j === i))
+    list.toggleAttribute("data-active", i >= 0)
+    const hex = i >= 0 ? (links[i].dataset.accent ?? null) : null
+    if (hex) document.documentElement.style.setProperty("--accent", hex)
+    else document.documentElement.style.removeProperty("--accent")
+    dispatchEvent(new CustomEvent("surface:tint", { detail: hex }))
+  }
+
+  links.forEach((a, i) => {
+    a.addEventListener("pointerenter", (e) => {
+      if (e.pointerType === "mouse") show(i)
+    })
+    a.addEventListener("focus", () => show(i))
+  })
+
+  list?.addEventListener("pointerleave", (e) => {
+    if (e.pointerType === "mouse") show(-1)
+  })
+  list?.addEventListener("focusout", (e) => {
+    if (!list.contains(e.relatedTarget as Node | null)) show(-1)
+  })
+
+  if (
+    matchMedia("(hover: none)").matches &&
+    !matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const i = links.indexOf(entry.target as HTMLAnchorElement)
+          if (entry.isIntersecting) show(i)
+          else if (i === active) show(-1)
+        }
+      },
+      { rootMargin: "-46% 0px -46% 0px" }
+    )
+    links.forEach((a) => io.observe(a))
+  }
+</script>

@@ -1,131 +1,464 @@
 ---
+import { readFileSync } from "node:fs"
 import { getCollection, render } from "astro:content"
 import Layout from "@/layouts/main.astro"
-import { ThemeToggle } from "@/components/ThemeToggle"
-import { ImageHero, ImageGrid } from "@/components/ImageGallery"
-import { ArrowLeft, ExternalLink, Github } from "@/components/icons"
+import Surface from "@/components/Surface.astro"
+import Gallery from "@/components/Gallery.astro"
+import Arrow from "@/components/Arrow.astro"
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects")
-  return projects.map((project) => ({
+  const projects = (await getCollection("projects")).sort(
+    (a, b) => a.data.order - b.data.order
+  )
+  return projects.map((project, index) => ({
     params: { slug: project.id },
-    props: { project },
+    props: {
+      project,
+      index,
+      total: projects.length,
+      next: projects[(index + 1) % projects.length],
+    },
   }))
 }
 
-const { project } = Astro.props
+const { project, index, total, next } = Astro.props
 const { Content } = await render(project)
-const { title, description, tags, images, links, githubUrl, liveUrl, year } =
-  project.data
+const {
+  title,
+  description,
+  tags,
+  images,
+  links,
+  githubUrl,
+  liveUrl,
+  year,
+  isNew,
+} = project.data
+const accent = project.data.accentColor ?? "#ece8dc"
+const pad = (n: number) => String(n).padStart(2, "0")
+
+const size = (src: string) => {
+  const b = readFileSync(`public${src}`)
+  if (b.readUInt32BE(0) === 0x89504e47)
+    return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) }
+  if (b.toString("ascii", 0, 3) === "GIF")
+    return { width: b.readUInt16LE(6), height: b.readUInt16LE(8) }
+  return {}
+}
+
+const shots = images.map((path) => {
+  const src = path.replace(/#wide$/, "")
+  const name = src
+    .split("/")
+    .pop()!
+    .replace(/\.\w+$/, "")
+    .replace(/[-_]+/g, " ")
+  return {
+    src,
+    alt: `${title}, ${name}`,
+    wide: path.endsWith("#wide"),
+    ...size(src),
+  }
+})
+
+const destinations = [
+  ...links,
+  ...(liveUrl ? [{ label: "Live Preview", url: liveUrl }] : []),
+  ...(githubUrl ? [{ label: "Source Code", url: githubUrl }] : []),
+].map(({ label, url }) => {
+  const u = new URL(url)
+  return {
+    label,
+    url,
+    where: (u.host + u.pathname).replace(/^www\./, "").replace(/\/$/, ""),
+  }
+})
 ---
 
 <Layout
   title={`${title} — Elwann Guillemot`}
   description={description}
-  image={images[0]}
+  image={shots[0]?.src}
 >
-  <div class="min-h-screen text-foreground">
-    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-20 md:py-16">
-      <header class="mb-12 flex w-full items-start justify-between">
-        <a
-          href="/#projects"
-          class="group inline-flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-        >
-          <ArrowLeft
-            size={14}
-            className="transition-transform duration-200 group-hover:-translate-x-0.5"
-          />
-          Back to projects
+  <div class="project" style={`--accent: ${accent}`}>
+    <header class="band">
+      <Surface mode="band" accent={accent} />
+      <div class="bar">
+        <a href="/#work" class="back">
+          <Arrow turn={180} />
+          <span>Index</span>
         </a>
-        <ThemeToggle client:load />
-      </header>
+        <a href="/" class="id">Elwann Guillemot</a>
+        <button type="button" class="seed" data-reseed>
+          <span class="label">Seed</span>
+          <span class="seed-n" data-readout="seed">0000</span>
+          <span class="sr-only">Change the surface pattern</span>
+        </button>
+      </div>
 
-      <header class="mb-12">
-        <h1 class="mb-3 text-3xl font-bold">{title}</h1>
-        <p class="mb-6 text-lg text-muted-foreground">{description}</p>
-        <p class="text-xs text-muted-foreground/40">
-          {tags.join(" · ")}
+      <div class="band-body">
+        <p class="label kicker">
+          <span>Project {pad(index + 1)} / {pad(total)}</span>
+          <span>{year}</span>
+          {isNew && <span class="new">New</span>}
         </p>
-      </header>
-
-      <div class="mb-12">
-        <ImageHero images={images} title={title} client:load />
+        <h1>{title}</h1>
+        <p class="desc">{description}</p>
       </div>
+    </header>
 
-      <div class="mb-12 grid gap-12 md:grid-cols-3">
-        <div class="col-span-2">
-          <h2 class="mb-4 text-xl font-semibold">About the project</h2>
-          <div
-            class="space-y-4 text-muted-foreground [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors [&_a:hover]:text-primary"
-          >
-            <Content />
-          </div>
+    <main class="page">
+      <dl class="facts">
+        <div>
+          <dt class="label">Year</dt>
+          <dd>{year}</dd>
         </div>
-
-        <div class="space-y-6">
-          <div>
-            <h3
-              class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase"
-            >
-              Year
-            </h3>
-            <p class="text-sm">{year}</p>
-          </div>
-
-          {
-            (links.length > 0 || liveUrl || githubUrl) && (
-              <div>
-                <h3 class="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  Links
-                </h3>
-                <div class="space-y-2">
-                  {links.map(({ label, url }) => (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      {label}
-                    </a>
+        <div>
+          <dt class="label">Stack</dt>
+          <dd>
+            <ul class="tags">
+              {tags.map((tag) => <li>{tag}</li>)}
+            </ul>
+          </dd>
+        </div>
+        {
+          destinations.length > 0 && (
+            <div>
+              <dt class="label">Links</dt>
+              <dd>
+                <ul class="links">
+                  {destinations.map(({ label, url, where }) => (
+                    <li>
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        <span class="link-label">{label}</span>
+                        <span class="where">{where}</span>
+                        <Arrow turn={-45} />
+                      </a>
+                    </li>
                   ))}
-                  {liveUrl && (
-                    <a
-                      href={liveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <ExternalLink size={14} />
-                      Live Preview
-                    </a>
-                  )}
-                  {githubUrl && (
-                    <a
-                      href={githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1.5 text-sm transition-colors duration-200 hover:text-primary"
-                    >
-                      <Github size={14} />
-                      Source Code
-                    </a>
-                  )}
-                </div>
-              </div>
-            )
-          }
-        </div>
-      </div>
+                </ul>
+              </dd>
+            </div>
+          )
+        }
+      </dl>
 
-      {
-        images.length > 1 && (
-          <div class="mb-12">
-            <ImageGrid images={images} title={title} client:load />
-          </div>
-        )
-      }
-    </div>
+      <article class="prose">
+        <Content />
+      </article>
+    </main>
+
+    {shots.length > 0 && <Gallery images={shots} />}
+
+    <nav class="next" aria-label="Next project">
+      <a
+        href={`/projects/${next.id}`}
+        style={`--next: ${next.data.accentColor ?? "#ece8dc"}`}
+      >
+        <span class="label">Next project</span>
+        <span class="next-title">
+          {next.data.title}
+          <Arrow />
+        </span>
+      </a>
+    </nav>
+
+    <footer class="foot">
+      <span class="label">Elwann Guillemot — Back-end Developer</span>
+      <a href="/#contact" class="label">Contact</a>
+    </footer>
   </div>
 </Layout>
+
+<style>
+  .band {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: clamp(540px, 80svh, 860px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 64px;
+    padding: 24px var(--gutter) clamp(44px, 8vh, 80px);
+  }
+
+  .band::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    z-index: -1;
+    height: 55%;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(11 12 10 / 0.7) 55%,
+      var(--bg)
+    );
+    pointer-events: none;
+  }
+
+  .bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: baseline;
+    font-size: 0.9375rem;
+  }
+
+  .back {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .back:hover :global(.arrow) {
+    translate: -3px 0;
+  }
+
+  .id {
+    font-weight: 620;
+    letter-spacing: -0.01em;
+  }
+
+  .seed {
+    justify-self: end;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .seed-n {
+    min-width: 4ch;
+    font-variant-numeric: tabular-nums;
+    font-weight: 520;
+    color: var(--accent);
+  }
+
+  .band-body {
+    max-width: 72rem;
+  }
+
+  .kicker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    margin-bottom: clamp(16px, 2.4vh, 28px);
+    color: var(--fg-2);
+  }
+
+  h1 {
+    font-size: clamp(3.25rem, 10.5vw, 11rem);
+    line-height: 0.88;
+    font-weight: 560;
+    font-stretch: 80%;
+    letter-spacing: -0.05em;
+    text-wrap: balance;
+    margin-left: -0.04em;
+  }
+
+  .desc {
+    max-width: 28em;
+    margin-top: clamp(18px, 3vh, 32px);
+    font-size: clamp(1.125rem, 1.9vw, 1.75rem);
+    line-height: 1.25;
+    font-weight: 340;
+    letter-spacing: -0.012em;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .page {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gutter);
+    row-gap: 48px;
+    padding: clamp(40px, 8vh, 88px) var(--gutter) clamp(72px, 12vh, 128px);
+  }
+
+  .facts {
+    grid-column: 1 / span 4;
+    display: grid;
+    align-content: start;
+    gap: 28px;
+  }
+
+  .facts > div {
+    display: grid;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+  }
+
+  dd {
+    font-size: 1.0625rem;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tags li {
+    padding: 3px 10px 4px;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    font-size: 0.875rem;
+  }
+
+  .links {
+    display: grid;
+  }
+
+  .links a {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 12px;
+    padding: 6px 0;
+  }
+
+  .where {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    color: var(--fg-3);
+    transition: color 0.3s var(--ease-out);
+  }
+
+  .links a :global(.arrow) {
+    align-self: center;
+    color: var(--fg-3);
+    transition:
+      translate 0.4s var(--ease-out),
+      color 0.3s var(--ease-out);
+  }
+
+  .links a:hover .where {
+    color: var(--fg-2);
+  }
+
+  .links a:hover :global(.arrow) {
+    color: var(--accent);
+    translate: 2px -2px;
+  }
+
+  .prose {
+    grid-column: 6 / span 7;
+    max-width: 36em;
+    font-size: clamp(1.0625rem, 1.2vw, 1.1875rem);
+    line-height: 1.62;
+    color: var(--fg-2);
+  }
+
+  .prose :global(p + p) {
+    margin-top: 1.1em;
+  }
+
+  .prose :global(p:first-child) {
+    margin-bottom: 1.4em;
+    font-size: 1.35em;
+    line-height: 1.38;
+    font-weight: 350;
+    letter-spacing: -0.012em;
+    color: var(--fg);
+  }
+
+  .prose :global(a) {
+    color: var(--fg);
+    text-decoration: underline 1px;
+    text-underline-offset: 0.2em;
+    text-decoration-color: color-mix(in oklab, var(--accent) 60%, transparent);
+    transition: text-decoration-color 0.3s var(--ease-out);
+  }
+
+  .prose :global(a:hover) {
+    text-decoration-color: var(--accent);
+  }
+
+  .next a {
+    display: grid;
+    gap: 14px;
+    padding: clamp(48px, 9vh, 96px) var(--gutter);
+    border-top: 1px solid var(--rule);
+  }
+
+  .next-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-size: clamp(2.25rem, 6.5vw, 6.5rem);
+    line-height: 1;
+    font-weight: 320;
+    font-stretch: 88%;
+    letter-spacing: -0.04em;
+    transition:
+      font-weight 0.7s var(--ease-out),
+      font-stretch 0.7s var(--ease-out),
+      color 0.4s var(--ease-out);
+  }
+
+  .next-title :global(.arrow) {
+    width: 0.55em;
+    height: 0.55em;
+    color: var(--next);
+  }
+
+  .next a:hover .next-title,
+  .next a:focus-visible .next-title {
+    font-weight: 600;
+    font-stretch: 100%;
+  }
+
+  .next a:hover .next-title :global(.arrow) {
+    translate: 0.12em 0;
+  }
+
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px var(--gutter);
+    border-top: 1px solid var(--rule);
+  }
+
+  .foot a:hover {
+    color: var(--fg);
+  }
+
+  @media (max-width: 899px) {
+    .band {
+      min-height: clamp(480px, 72svh, 720px);
+    }
+
+    .bar {
+      grid-template-columns: 1fr auto;
+    }
+
+    .bar .id {
+      display: none;
+    }
+
+    .facts,
+    .prose {
+      grid-column: 1 / -1;
+    }
+
+    .prose {
+      grid-row: 1;
+    }
+
+    .prose :global(p:first-child) {
+      font-size: 1.2em;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .next-title {
+      transition: none;
+    }
+  }
+</style>
