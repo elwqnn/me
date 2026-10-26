@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
+import { imageMetadata } from "astro/assets/utils"
 import { getCollection } from "astro:content"
 
 export const HOME_BG = "#FABD2F"
@@ -10,6 +13,12 @@ export async function getProjects() {
 export const cleanSrc = (src: string) => src.replace(/#wide$/, "")
 
 export const isWide = (src: string) => src.endsWith("#wide")
+
+export async function imageSize(src: string) {
+  const file = await readFile(join(process.cwd(), "public", cleanSrc(src)))
+  const { width, height } = await imageMetadata(file, src)
+  return { width, height }
+}
 
 export const pad = (n: number) => String(n).padStart(2, "0")
 

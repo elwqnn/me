@@ -57,6 +57,7 @@ img,
 svg {
   display: block;
   max-width: 100%;
+  height: auto;
 }
 
 a {
@@ -127,7 +128,7 @@ html.live [data-bg] {
 }
 
 .label > span {
-  opacity: 0.55;
+  opacity: 0.75;
   margin-right: 0.35em;
 }
 
@@ -301,20 +302,30 @@ html.js:not(.fitted) .char {
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--gutter);
   align-items: start;
-  margin-top: clamp(20px, 3vw, 40px);
-  padding-top: 16px;
+  margin-top: clamp(12px, 1.4vw, 24px);
+  padding-top: 14px;
   border-top: var(--line) solid var(--ink);
 }
 
 .hero__role {
-  grid-column: 1 / 5;
-  font: 900 clamp(2rem, 3.6vw, 3.5rem) / 0.86 var(--display);
+  grid-column: 1 / 6;
+  font: 900 clamp(2rem, 3.4vw, 3.5rem) / 0.86 var(--display);
   text-transform: uppercase;
 }
 
+@media (min-width: 901px) {
+  .hero__role {
+    white-space: nowrap;
+  }
+
+  .hero__role br {
+    display: none;
+  }
+}
+
 .hero__blurb {
-  grid-column: 5 / 10;
-  max-width: 34ch;
+  grid-column: 6 / 11;
+  max-width: 46ch;
   font-size: clamp(1rem, 1.25vw, 1.25rem);
   line-height: 1.35;
   font-weight: 500;
@@ -322,7 +333,7 @@ html.js:not(.fitted) .char {
 }
 
 .hero__down {
-  grid-column: 10 / -1;
+  grid-column: 11 / -1;
   justify-self: end;
   display: inline-flex;
   align-items: center;
@@ -1027,7 +1038,6 @@ html.js:not(.fitted) .char {
 }
 
 .phero__cover .cover {
-  aspect-ratio: auto;
   max-height: 84vh;
 }
 

@@ -5,6 +5,7 @@ interface Props {
   tags: string[]
   accent: string
   eager?: boolean
+  size?: { width: number; height: number }
   class?: string
 }
 
@@ -14,6 +15,7 @@ const {
   tags,
   accent,
   eager = false,
+  size,
   class: className,
 } = Astro.props
 ---
@@ -24,6 +26,9 @@ const {
       class:list={["cover", className]}
       src={src}
       alt={`${title} cover`}
+      width={size?.width}
+      height={size?.height}
+      style={size && `aspect-ratio: ${size.width} / ${size.height}`}
       loading={eager ? "eager" : "lazy"}
       decoding="async"
       fetchpriority={eager ? "high" : "auto"}

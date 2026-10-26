@@ -11,6 +11,7 @@ import {
   HOME_BG,
   cleanSrc,
   getProjects,
+  imageSize,
   isWide,
   pad,
   titleLines,
@@ -36,6 +37,7 @@ const { title, description, tags, images, links, githubUrl, liveUrl, year } =
 const accent = project.data.accentColor ?? HOME_BG
 const nextAccent = next.data.accentColor ?? HOME_BG
 const sources = images.map(cleanSrc)
+const sizes = await Promise.all(sources.map(imageSize))
 const allLinks = [
   ...links,
   ...(liveUrl ? [{ label: "Live preview", url: liveUrl }] : []),
@@ -108,6 +110,7 @@ const allLinks = [
                 title={title}
                 tags={tags}
                 accent={accent}
+                size={sizes[0]}
                 eager
               />
             </span>
@@ -188,6 +191,8 @@ const allLinks = [
               <img
                 src={cleanSrc(src)}
                 alt={`${title}, image ${i + 2}`}
+                width={sizes[i + 1].width}
+                height={sizes[i + 1].height}
                 loading="lazy"
                 decoding="async"
               />
